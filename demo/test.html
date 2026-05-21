@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Test Login</h1>
+    <div id="result"></div>
+    <script>
+        $(document).ready(function() {
+            $.ajax({
+                url: 'http://127.0.0.1:8083/api/users/login',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({username: 'aa', password: '123456'}),
+                success: function(response) {
+                    $('#result').html('Success: ' + JSON.stringify(response));
+                },
+                error: function(xhr, status, error) {
+                    $('#result').html('Error: ' + status + ' - ' + error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
