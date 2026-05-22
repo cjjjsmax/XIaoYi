@@ -73,8 +73,11 @@ public class ProductController {
             boolean success = productService.publishProduct(product, request.getSellerId());
             if (success) {
                 inspectionAsyncService.InspectionAsync(Long.valueOf(product.getId()));
+                Map<String, Object> data = new HashMap<>();
+                data.put("id", product.getId());
                 result.put("success", true);
                 result.put("message", "发布成功，AI质检正在进行中...");
+                result.put("data", data);
             }else {
                 result.put("success", false);
                 result.put("message", "发布失败");

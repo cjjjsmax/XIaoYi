@@ -20,28 +20,26 @@ class InspectionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG,"服务被创建了")
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        Log.d(TAG,"Service被绑定了")
         return binder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val productId = intent?.getLongExtra("productId",-1L) ?: -1L
         if (productId != -1L){
-            Log.d(TAG,"开始后台质检，商品ID：$productId")
             Thread{
                 performInspection(productId)
             }.start()
+        } else {
+            stopSelf()
         }
         return START_NOT_STICKY
     }
 
     private fun performInspection(productId: Long){
         try {
-            Log.d(TAG,"正在质检商品: $productId")
             val request = QualityInspectionRequest(productId = productId)
             RetrofitClient.qualityInspectionApi.generateProductReport(request).enqueue(object :
                 Callback<Map<String , Any>>{
@@ -54,7 +52,6 @@ class InspectionService : Service() {
                         val code = data?.get("code") as? Int ?: -1
                         if (code == 200){
                             Log.d(TAG,"质检成功！ 商品ID： $productId")
-                            Log.d(TAG,"质检结果: $data")
                         }else{
                             val message = data?.get("message") as? String ?: "质检失败"
                             Log.e(TAG,"质检失败: $message")
@@ -80,6 +77,5 @@ class InspectionService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG,"销毁服务")
     }
 }

@@ -584,7 +584,8 @@ private fun publishProductWithImages(
             override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>){
                 if (response.isSuccessful){
                     val responseBody = response.body()
-                    val productId = (responseBody?.get("data") as? Map<String, Any>)?.get("id") as? Long
+                    val idValue = (responseBody?.get("data") as? Map<String, Any>)?.get("id")
+                    val productId = (idValue as? Number)?.toLong()
                     if (productId != null){
                         val intent = Intent(context, InspectionService::class.java).apply {
                             putExtra("productId", productId)
