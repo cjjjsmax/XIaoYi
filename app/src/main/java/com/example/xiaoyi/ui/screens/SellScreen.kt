@@ -1,6 +1,7 @@
 package com.example.xiaoyi.ui.screens
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -31,6 +31,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,26 +43,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.xiaoyi.api.RetrofitClient
-import com.example.xiaoyi.api.PublishProductRequest
-import com.example.xiaoyi.api.PublishWantedRequest
 import com.example.xiaoyi.ui.components.ProductFormFields
+import com.example.xiaoyi.viewmodel.ProductViewModel
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
-import android.content.ContentResolver
-import android.content.Context
-import android.content.Intent
-import android.provider.MediaStore
-import android.util.Log
-import com.example.xiaoyi.api.QualityInspectionRequest
-import com.example.xiaoyi.service.InspectionService
 
 data class Category(val id: Int, val name: String)
 val categories = listOf(
@@ -76,10 +70,11 @@ val categories = listOf(
 fun SellScreen(
     navController: NavController,
     userId: Long = 1,
-    paddingValues: PaddingValues
-){
+    paddingValues: PaddingValues,
+    viewModel: ProductViewModel = viewModel()
+) {
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("发布商品","发布求购")
+    val tabs = listOf("发布商品", "发布求购")
 
     Column(
         modifier = Modifier
@@ -100,7 +95,7 @@ fun SellScreen(
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
-                    onClick = {selectedTabIndex = index},
+                    onClick = { selectedTabIndex = index },
                     text = {
                         Text(
                             text = title,
@@ -113,9 +108,9 @@ fun SellScreen(
                 )
             }
         }
-        when (selectedTabIndex){
-            0 -> PublishProductTab(userId = userId, navController = navController)
-            1 -> PublishWantedTab(userId = userId, navController = navController)
+        when (selectedTabIndex) {
+            0 -> PublishProductTab(userId = userId, navController = navController, viewModel = viewModel)
+            1 -> PublishWantedTab(userId = userId, navController = navController, viewModel = viewModel)
         }
     }
 }
@@ -123,24 +118,25 @@ fun SellScreen(
 @Composable
 private fun PublishProductTab(
     userId: Long,
-    navController: NavController
-){
+    navController: NavController,
+    viewModel: ProductViewModel
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var title by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    var showSuccessDialog by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedImages by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var uploadedImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val isLoading by viewModel.isPublishProductLoading.collectAsState()
+    val errorMessage by viewModel.publishProductErrorMessage.collectAsState()
+    val publishSuccess by viewModel.publishProductSuccess.collectAsState()
 
     val pickImagesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) {
         uris -> selectedImages = uris
     }
 
-    fun uploadImagesAndPublish(context: Context, imageUris: List<Uri>) {
+    fun uploadImagesAndPublish(imageUris: List<Uri>) {
         val currentTitle = title
         val currentPrice = price.toDouble()
         val currentDescription = description
@@ -148,15 +144,13 @@ private fun PublishProductTab(
         val currentUserId = userId
 
         if (imageUris.isEmpty()) {
-            publishProductWithImages(currentTitle, currentPrice, currentDescription, currentCategoryId, currentUserId, emptyList(),context,
-                onSuccess = {
-                    isLoading = false
-                    showSuccessDialog = true
-                },
-                onError = { error ->
-                    isLoading = false
-                    errorMessage = error
-                }
+            viewModel.publishProduct(
+                title = currentTitle,
+                price = currentPrice,
+                description = currentDescription,
+                categoryId = currentCategoryId,
+                sellerId = currentUserId,
+                images = ""
             )
             return
         }
@@ -188,34 +182,31 @@ private fun PublishProductTab(
                     }
 
                     if (uploadCount == imageUris.size) {
-                        publishProductWithImages(currentTitle, currentPrice, currentDescription, currentCategoryId, currentUserId, urls,context,
-                            onSuccess = {
-                                isLoading = false
-                                showSuccessDialog = true
-                            },
-                            onError = { error ->
-                                isLoading = false
-                                errorMessage = error
-                            }
+                        viewModel.publishProduct(
+                            title = currentTitle,
+                            price = currentPrice,
+                            description = currentDescription,
+                            categoryId = currentCategoryId,
+                            sellerId = currentUserId,
+                            images = urls.joinToString(",")
                         )
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                uploadCount++
-                if (uploadCount == imageUris.size) {
-                    publishProductWithImages(currentTitle, currentPrice, currentDescription, currentCategoryId, currentUserId, urls,context,
-                        onSuccess = {
-                            isLoading = false
-                            showSuccessDialog = true
-                        },
-                        onError = { error ->
-                            isLoading = false
-                            errorMessage = error
-                        }
-                    )
+                    uploadCount++
+                    Log.e("SellScreen", "图片上传失败: ${t.message}")
+                    if (uploadCount == imageUris.size) {
+                        viewModel.publishProduct(
+                            title = currentTitle,
+                            price = currentPrice,
+                            description = currentDescription,
+                            categoryId = currentCategoryId,
+                            sellerId = currentUserId,
+                            images = urls.joinToString(",")
+                        )
+                    }
                 }
-            }
             })
         }
     }
@@ -229,23 +220,16 @@ private fun PublishProductTab(
     ) {
         ProductFormFields(
             title = title,
-            onTitleChange = {
-                title = it
-                errorMessage = ""
-            },
+            onTitleChange = { title = it },
             price = price,
             onPriceChange = {
                 if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
                     price = it
-                    errorMessage = ""
                 }
             },
             description = description,
-            onDescriptionChange = {
-                description = it
-                errorMessage = ""
-            },
-            errorMessage = errorMessage
+            onDescriptionChange = { description = it },
+            errorMessage = errorMessage ?: ""
         )
 
         Column(
@@ -294,10 +278,7 @@ private fun PublishProductTab(
                     ) {
                         RadioButton(
                             selected = selectedCategory?.id == category.id,
-                            onClick = {
-                                selectedCategory = category
-                                errorMessage = ""
-                            }
+                            onClick = { selectedCategory = category }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -316,27 +297,28 @@ private fun PublishProductTab(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (errorMessage.isNotEmpty()){
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        errorMessage?.let { error ->
+            if (error.isNotEmpty()) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
         }
 
         Button(
             onClick = {
-                when{
-                    title.isBlank() -> errorMessage = "请输入商品标题"
-                    price.isBlank() -> errorMessage = "请输入商品价格"
-                    selectedCategory == null -> errorMessage = "请选择商品分类"
-                    else ->{
+                when {
+                    title.isBlank() -> viewModel.setPublishProductError("请输入商品标题")
+                    price.isBlank() -> viewModel.setPublishProductError("请输入商品价格")
+                    selectedCategory == null -> viewModel.setPublishProductError("请选择商品分类")
+                    else -> {
                         val priceValue = price.toDoubleOrNull()
-                        if (priceValue == null || priceValue <= 0){
-                            errorMessage = "请输入有效的商品价格"
+                        if (priceValue == null || priceValue <= 0) {
+                            viewModel.setPublishProductError("请输入有效的商品价格")
                         } else {
-                           isLoading = true
-                            uploadImagesAndPublish(context, selectedImages)
+                            uploadImagesAndPublish(selectedImages)
                         }
                     }
                 }
@@ -346,7 +328,7 @@ private fun PublishProductTab(
                 .height(56.dp),
             enabled = !isLoading
         ) {
-            if (isLoading){
+            if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -365,39 +347,43 @@ private fun PublishProductTab(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    if (showSuccessDialog){
-       AlertDialog(
-           onDismissRequest = {
-               showSuccessDialog = false
-               navController.popBackStack()
-           },
-           title = { Text("发布成功")},
-           text = {Text("您的商品已成功发布！")},
-           confirmButton = {
-               TextButton(
-                   onClick = {
-                       showSuccessDialog = false
-                       navController.popBackStack()
-                   }
-               ) {
-                   Text("确定")
-               }
-           }
-       )
+
+    if (publishSuccess) {
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.resetPublishProductState()
+                navController.popBackStack()
+            },
+            title = { Text("发布成功") },
+            text = { Text("您的商品已成功发布！AI质检正在进行中...") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetPublishProductState()
+                        navController.popBackStack()
+                    }
+                ) {
+                    Text("确定")
+                }
+            }
+        )
     }
 }
+
 @Composable
 private fun PublishWantedTab(
     userId: Long,
-    navController: NavController
-){
+    navController: NavController,
+    viewModel: ProductViewModel
+) {
     var title by remember { mutableStateOf("") }
     var maxPrice by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    var showSuccessDialog by remember { mutableStateOf(false) }
+
+    val isLoading by viewModel.isPublishWantedLoading.collectAsState()
+    val errorMessage by viewModel.publishWantedErrorMessage.collectAsState()
+    val publishSuccess by viewModel.publishWantedSuccess.collectAsState()
 
     Column(
         modifier = Modifier
@@ -411,23 +397,16 @@ private fun PublishWantedTab(
         ) {
             ProductFormFields(
                 title = title,
-                onTitleChange = {
-                    title = it
-                    errorMessage = ""
-                },
+                onTitleChange = { title = it },
                 price = maxPrice,
                 onPriceChange = {
-                if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                    maxPrice = it
-                    errorMessage = ""
-                }
-            },
-                description = description,
-                onDescriptionChange = {
-                    description = it
-                    errorMessage = ""
+                    if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                        maxPrice = it
+                    }
                 },
-                errorMessage = errorMessage,
+                description = description,
+                onDescriptionChange = { description = it },
+                errorMessage = errorMessage ?: "",
                 titleLabel = "求购标题",
                 priceLabel = "最高预算",
                 descriptionLabel = "求购描述"
@@ -444,7 +423,7 @@ private fun PublishWantedTab(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp,MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.small)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.small)
                     .padding(16.dp)
             ) {
                 categories.forEach { category ->
@@ -456,10 +435,7 @@ private fun PublishWantedTab(
                     ) {
                         RadioButton(
                             selected = selectedCategory?.id == category.id,
-                            onClick = {
-                                selectedCategory = category
-                                errorMessage = ""
-                            }
+                            onClick = { selectedCategory = category }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -479,30 +455,20 @@ private fun PublishWantedTab(
         Button(
             onClick = {
                 when {
-                    title.isBlank() -> errorMessage = "请输入求购物品标题"
-                    maxPrice.isBlank() -> errorMessage = "请输入期望价格"
-                    selectedCategory == null -> errorMessage = "请选择求购分类"
-                    else ->{
+                    title.isBlank() -> viewModel.setPublishWantedError("请输入求购物品标题")
+                    maxPrice.isBlank() -> viewModel.setPublishWantedError("请输入期望价格")
+                    selectedCategory == null -> viewModel.setPublishWantedError("请选择求购分类")
+                    else -> {
                         val priceValue = maxPrice.toDoubleOrNull()
-                        if (priceValue == null || priceValue <= 0){
-                            errorMessage = "请输入有效的期望价格"
+                        if (priceValue == null || priceValue <= 0) {
+                            viewModel.setPublishWantedError("请输入有效的期望价格")
                         } else {
-                            isLoading = true
-                            publishWanted(
+                            viewModel.publishWanted(
                                 title = title,
                                 maxPrice = priceValue,
                                 description = description,
                                 categoryId = selectedCategory!!.id,
-                                buyerId = userId,
-                                onSuccess = {
-                                    isLoading = false
-                                    showSuccessDialog = true
-                                },
-                                onError = {
-                                    error ->
-                                    isLoading = false
-                                    errorMessage = error
-                                }
+                                buyerId = userId
                             )
                         }
                     }
@@ -533,114 +499,23 @@ private fun PublishWantedTab(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    if (showSuccessDialog) {
+
+    if (publishSuccess) {
         AlertDialog(
             onDismissRequest = {
-                showSuccessDialog = false
+                viewModel.resetPublishWantedState()
                 navController.popBackStack()
             },
             title = { Text("发布成功") },
             text = { Text("您的求购信息已成功发布！") },
             confirmButton = {
                 TextButton(onClick = {
-                    showSuccessDialog = false
+                    viewModel.resetPublishWantedState()
                     navController.popBackStack()
                 }) {
                     Text("确定")
                 }
             }
         )
-    }
-}
-private fun publishProductWithImages(
-    title: String,
-    price: Double,
-    description: String,
-    categoryId: Int,
-    sellerId: Long,
-    imageUrls: List<String>,
-    context: Context,
-    overallCondition: String? = null,
-    flaws: List<Map<String, String>>? = null,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-){
-    try {
-        val imagesStr = imageUrls.joinToString(",")
-        val productData = PublishProductRequest(
-            title = title,
-            price = price,
-            description = description,
-            categoryId = categoryId,
-            sellerId = sellerId,
-            status = 1,
-            images = imagesStr,
-            viewCount = 0,
-            overallCondition = overallCondition,
-            flaws = flaws?.joinToString(";") { "${it["part"]}:${it["desc"]}" } ?: ""
-        )
-        val call = RetrofitClient.productApi.publishProduct(productData)
-        call.enqueue(object : Callback<Map<String, Any>>{
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>){
-                if (response.isSuccessful){
-                    val responseBody = response.body()
-                    val idValue = (responseBody?.get("data") as? Map<String, Any>)?.get("id")
-                    val productId = (idValue as? Number)?.toLong()
-                    if (productId != null){
-                        val intent = Intent(context, InspectionService::class.java).apply {
-                            putExtra("productId", productId)
-                        }
-                        context.startService(intent)
-                    }
-                    onSuccess()
-                }else{
-                    onError("发布失败: ${response.code()}, ${response.message()}")
-                }
-            }
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                onError("网络错误: ${t.message}, ${t.javaClass.simpleName}")
-            }
-        })
-    } catch (e: Exception) {
-        onError("发布失败: ${e.message}, ${e.javaClass.simpleName}")
-    }
-}
-
-private fun publishWanted(
-    title: String,
-    maxPrice: Double,
-    description: String,
-    categoryId: Int,
-    buyerId: Long,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    try {
-        val wantedData = PublishWantedRequest(
-            title = title,
-            maxPrice = maxPrice,
-            description = description,
-            categoryId = categoryId,
-            buyerId = buyerId,
-            status = 1,
-            viewCount = 0
-        )
-
-        val call = RetrofitClient.productApi.publishWanted(wantedData)
-        call.enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
-                if (response.isSuccessful) {
-                    onSuccess()
-                } else {
-                    onError("发布失败: ${response.code()}")
-                }
-            }
-
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                onError("网络错误: ${t.message}")
-            }
-        })
-    } catch (e: Exception) {
-        onError("发布失败: ${e.message}")
     }
 }

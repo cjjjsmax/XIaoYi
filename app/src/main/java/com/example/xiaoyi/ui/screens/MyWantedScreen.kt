@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,103 +26,48 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.data.database.entity.WantedEntity
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
-import com.example.xiaoyi.ui.components.ProductCard
 import com.example.xiaoyi.ui.components.WantedCard
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import com.example.xiaoyi.viewmodel.ProductViewModel
 
 @Composable
 fun MyWantedScreen(
     navController: NavController,
     userId: Long,
-    paddingValues: PaddingValues
-){
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var products by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    paddingValues: PaddingValues,
+    viewModel: ProductViewModel = viewModel()
+) {
+    val userWantedList by viewModel.userWantedList.collectAsState()
+    val isLoading by viewModel.isUserWantedLoading.collectAsState()
+    val errorMessage by viewModel.userWantedErrorMessage.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedProductId by remember { mutableStateOf<Long>(0L) }
 
-    fun loadUserProducts(userId: Long){
-        println("=== 开始加载用户求购 ===")
-        println("用户ID: $userId")
-
-        isLoading = true
-        errorMessage = null
-
-        val call = RetrofitClient.productApi.getUserPurchaseRequests(userId)
-
-        call.enqueue(object : Callback<List<Map<String, Any>>>{
-            override fun onResponse(
-                call: Call<List<Map<String, Any>>>,
-                response: Response<List<Map<String, Any>>>
-            ) {
-                isLoading = false
-                println("=== API响应 ===")
-                println("是否成功: ${response.isSuccessful}")
-                println("响应码: ${response.code()}")
-
-                if (response.isSuccessful){
-                    val data = response.body()
-                    println("返回数据数量: ${data?.size ?: 0}")
-                    println("返回数据: $data")
-                    products = data ?: emptyList()
-                }else{
-                    errorMessage = "请求失败: ${response.code()}"
-                    println("请求失败: ${response.code()}")
-                }
-            }
-
-            override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
-                isLoading = false
-                errorMessage = "网络波动: ${t.message}"
-                println("=== 网络错误 ===")
-                println("错误信息: ${t.message}")
-            }
-        })
+    LaunchedEffect(userId) {
+        viewModel.loadUserPurchaseRequests(userId)
     }
 
-    fun deletePurchaseRequest(requestId: Long) {
-        if (requestId == 0L) return
-        val call = RetrofitClient.productApi.deletePurchaseRequest(requestId)
-
-        call.enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
-                if (response.isSuccessful) {
-                    loadUserProducts(userId)
-                } else {
-                    errorMessage = "删除失败: ${response.code()}"
-                }
-            }
-
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                errorMessage = "删除失败: ${t.message}"
-            }
-        })
+    fun deleteWanted(requestId: Long) {
+        viewModel.deletePurchaseRequest(requestId)
+        viewModel.loadUserPurchaseRequests(userId)
     }
 
     @Composable
-    fun ProductCardWithActions(
-        product: Map<String, Any>,
+    fun WantedCardWithActions(
+        wanted: WantedEntity,
         onEdit: () -> Unit,
         onDelete: () -> Unit
-    ){
-        val wantedName = product["title"] as? String ?: ""
-        val maxPrice = product["maxPrice"]?.toString() ?: "0"
-        val description = product["description"] as? String ?: ""
+    ) {
         Column {
             WantedCard(
-                title = wantedName,
-                maxPrice = maxPrice,
-                description = description,
-                onClick = {
-
-                }
+                title = wanted.title,
+                maxPrice = wanted.maxPrice.toString(),
+                description = wanted.description,
+                onClick = { }
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -139,28 +86,24 @@ fun MyWantedScreen(
         }
     }
 
-    LaunchedEffect(userId) {
-        loadUserProducts(userId)
-    }
-
     DetailScreenTemplate(
         navController = navController,
         title = "我的求购",
         isLoading = isLoading,
         errorMessage = errorMessage
     ) {
-        if (products.isEmpty()){
+        if (userWantedList.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
-            ){
+            ) {
                 Text(
                     text = "暂无发布求购",
                     fontSize = 28.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }else{
+        } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
@@ -168,16 +111,14 @@ fun MyWantedScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(products.size){ index ->
-                    val product = products[index]
-                    ProductCardWithActions(
-                        product = product,
+                items(userWantedList) { wanted ->
+                    WantedCardWithActions(
+                        wanted = wanted,
                         onEdit = {
-                            val requestId = (product["id"] as? Number)?.toLong() ?: 0L
-                            navController.navigate(Screen.EditWanted.route.replace("{requestId}", requestId.toString()))
+                            navController.navigate(Screen.EditWanted.route.replace("{requestId}", wanted.id.toString()))
                         },
                         onDelete = {
-                            selectedProductId = (product["id"] as? Number)?.toLong() ?: 0L
+                            selectedProductId = wanted.id
                             showDeleteDialog = true
                         }
                     )
@@ -186,7 +127,7 @@ fun MyWantedScreen(
         }
     }
 
-    if (showDeleteDialog){
+    if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = {
                 showDeleteDialog = false
@@ -195,12 +136,12 @@ fun MyWantedScreen(
                 Text("确认删除")
             },
             text = {
-                Text("确定要删除这个商品吗？删除后无法恢复。")
+                Text("确定要删除这个求购吗？删除后无法恢复。")
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        deletePurchaseRequest(selectedProductId)
+                        deleteWanted(selectedProductId)
                         showDeleteDialog = false
                     }
                 ) {

@@ -45,21 +45,37 @@ interface ProductApi{
     //获取商品列表
     @GET("/api/products/list")
     fun getProducts(): Call<List<Map<String, Any>>>
-    //搜索商品（根据标题模糊匹配）
+
+    //根据分类获取商品列表
+    @GET("/api/products/list")
+    fun getProductsByCategory(@Query("categoryId") categoryId: Int): Call<List<Map<String, Any>>>
+
+    //搜索商品（根据标题模糊匹配，支持分类筛选）
     @GET("/api/products/search")
-    fun searchProducts(@Query("keyword") keyword: String): Call<List<Map<String, Any>>>
-    //获取求购列表
+    fun searchProducts(
+        @Query("keyword") keyword: String,
+        @Query("categoryId") categoryId: Int = 0
+    ): Call<List<Map<String, Any>>>
+    
+    //获取求购列表（支持关键词搜索和分类筛选）
     @GET("/api/purchase-requests/list")
-    fun getPurchaseRequests(): Call<List<Map<String, Any>>>
+    fun getPurchaseRequests(
+        @Query("keyword") keyword: String = "",
+        @Query("categoryId") categoryId: Int = 0
+    ): Call<List<Map<String, Any>>>
+    
     //发布商品
     @POST("/api/products/publish/json")
     fun publishProduct(@Body product: PublishProductRequest): Call<Map<String, Any>>
+    
     //发布求购
     @POST("/api/purchase-requests/publish")
     fun publishWanted(@Body purchaseRequest: PublishWantedRequest): Call<Map<String, Any>>
+    
     //获取用户发布的商品
     @GET("/api/products/user")
     fun getUserProducts(@Query("sellerId") sellerId: Long): Call<List<Map<String, Any>>>
+    
     //删除商品
     @DELETE("/api/products/delete")
     fun deleteProduct(@Query("id") id: Long): Call<Map<String, Any>>
@@ -80,15 +96,19 @@ interface ProductApi{
 
     @GET("/api/orders/seller")
     fun getOrdersBySeller(@Query("sellerId") sellerId: Long): Call<List<Map<String, Any>>>
+    
     //获取商品详情
     @GET("/api/products/detail")
     fun getProductById(@Query("id") id: Long): Call<Map<String, Any>>
+    
     //获取求购详情
     @GET("/api/purchase-requests/detail")
     fun getPurchaseRequestById(@Query("id") id: Long): Call<Map<String, Any>>
+    
     //更新商品
     @PUT("/api/products/{productId}")
     fun updateProduct(@Path("productId") productId: Long, @Body request: PublishProductRequest): Call<Map<String, Any>>
+    
     //获取用户求购
     @GET("/api/purchase-requests/user")
     fun getUserPurchaseRequests(@Query("buyerId") buyerId: Long): Call<List<Map<String, Any>>>

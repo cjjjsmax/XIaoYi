@@ -1,380 +1,357 @@
 package com.example.xiaoyi.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.data.database.entity.ProductEntity
+import com.example.xiaoyi.data.database.entity.WantedEntity
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.ui.components.ProductCard
-import com.example.xiaoyi.ui.components.SearchBar
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import com.example.xiaoyi.ui.components.WantedCard
+import com.example.xiaoyi.viewmodel.ProductViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
+
+private data class ProductCategory(val id: Int, val name: String)
+
+private val productCategories = listOf(
+    ProductCategory(0, "全部"),
+    ProductCategory(1, "数码产品"),
+    ProductCategory(2, "服装鞋包"),
+    ProductCategory(3, "书籍文具"),
+    ProductCategory(4, "运动户外"),
+    ProductCategory(5, "其他")
+)
 
 @Composable
 fun ProductListScreen(
     navController: NavController,
-    paddingValues: PaddingValues
+    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    viewModel: ProductViewModel = viewModel()
 ) {
-    //搜索关键词状态
-    var searchQueue by remember { mutableStateOf("") }
-    //选中的分类索引
-    var selectedCategoryIndex by remember { mutableStateOf(0) }
-    //商品求购切换索引
-    var selectedListIndex by remember { mutableStateOf(0) }
-    //求购列表数据
-    var purchaseRequests by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    //商品列表数据
-    var products by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    //加载状态
-    var isLoading by remember { mutableStateOf(true) }
-    //分类列表
-    val categories = listOf("全部", "数码产品", "服装鞋包", "书籍文具", "运动户外", "其他")
-    // 商品/求购切换标签
+    var selectedTabIndex by remember { mutableStateOf(0) }
     val listTabs = listOf("商品列表", "求购列表")
-    //错误消息状态
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // 加载商品数据
-    fun loadProducts() {
-        isLoading = true
-        errorMessage = null
-        val call = RetrofitClient.productApi.getProducts()
-        call.enqueue(object : Callback<List<Map<String, Any>>> {
-            override fun onResponse(
-                call: Call<List<Map<String, Any>>>,
-                response: Response<List<Map<String, Any>>>
-            ) {
-                isLoading = false
-                if (response.isSuccessful) {
-                    products = response.body() ?: emptyList()
-                    // 添加日志查看数据
-                    println("Products loaded: ${products.size}")
-                } else {
-                    errorMessage = "加载失败: ${response.code()}"
-                    println("Response error: ${response.code()}, ${response.message()}")
-                }
-            }
-
-            override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
-                isLoading = false
-                errorMessage = "网络错误: ${t.message}"
-                println("Network error: ${t.message}")
-            }
-        })
-    }
-
-    //加载求购数据
-    fun loadPurchaseRequests() {
-        isLoading = true
-        errorMessage = null
-        val call = RetrofitClient.productApi.getPurchaseRequests()
-        call.enqueue(object : Callback<List<Map<String, Any>>> {
-            override fun onResponse(
-                call: Call<List<Map<String, Any>>>,
-                response: Response<List<Map<String, Any>>>
-            ) {
-                isLoading = false
-                if (response.isSuccessful) {
-                    purchaseRequests = response.body() ?: emptyList()
-                    // 添加日志查看数据
-                    println("Purchase requests loaded: ${purchaseRequests.size}")
-                } else {
-                    errorMessage = "加载失败: ${response.code()}"
-                    println("Response error: ${response.code()}, ${response.message()}")
-                }
-            }
-
-            override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
-                isLoading = false
-                errorMessage = "网络错误: ${t.message}"
-                println("Network error: ${t.message}")
-            }
-        })
-    }
-
-    //搜索商品（调用后端接口）
-    fun searchProducts(keyword: String) {
-        isLoading = true
-        errorMessage = null
-        val call = RetrofitClient.productApi.searchProducts(keyword)
-        call.enqueue(object : Callback<List<Map<String, Any>>> {
-            override fun onResponse(
-                call: Call<List<Map<String, Any>>>,
-                response: Response<List<Map<String, Any>>>
-            ) {
-                isLoading = false
-                if (response.isSuccessful) {
-                    products = response.body() ?: emptyList()
-                    println("Search products loaded: ${products.size}")
-                } else {
-                    errorMessage = "搜索失败: ${response.code()}"
-                    println("Search response error: ${response.code()}, ${response.message()}")
-                }
-            }
-
-            override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
-                isLoading = false
-                errorMessage = "网络错误: ${t.message}"
-                println("Search network error: ${t.message}")
-            }
-        })
-    }
+    val products by viewModel.products.collectAsState()
+    val isProductsLoading by viewModel.isProductsLoading.collectAsState()
+    val productsErrorMessage by viewModel.productsErrorMessage.collectAsState()
+    val wantedList by viewModel.wantedList.collectAsState()
+    val isWantedLoading by viewModel.isWantedLoading.collectAsState()
+    val wantedErrorMessage by viewModel.wantedErrorMessage.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+    var wantedSearchQuery by remember { mutableStateOf("") }
+    var selectedCategory: ProductCategory by remember { mutableStateOf(productCategories[0]) }
+    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        loadProducts()
-        loadPurchaseRequests()
+        viewModel.loadProducts()
+        viewModel.loadPurchaseRequests()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-    ) {
-        SearchBar(onSearch = { keyword ->
-            searchQueue = keyword
-            if (keyword.isNotEmpty()) {
-                searchProducts(keyword)
+    fun onSearch() {
+        if (selectedTabIndex == 0) {
+            // 商品列表：按按钮搜索
+            if (searchQuery.isEmpty() && selectedCategory.id == 0) {
+                viewModel.loadProducts()
             } else {
-                loadProducts()
+                viewModel.searchProducts(searchQuery, selectedCategory.id)
             }
-        })
-        LazyRow(
+        }
+    }
+
+    fun onWantedSearch() {
+        if (selectedTabIndex == 1) {
+            viewModel.loadPurchaseRequests(wantedSearchQuery, selectedCategory.id)
+        }
+    }
+
+    fun onCategoryChange(category: ProductCategory) {
+        selectedCategory = category
+        expanded = false
+        if (selectedTabIndex == 0) {
+            if (searchQuery.isEmpty()) {
+                if (category.id == 0) {
+                    viewModel.loadProducts()
+                } else {
+                    viewModel.loadProductsByCategory(category.id)
+                }
+            } else {
+                viewModel.searchProducts(searchQuery, category.id)
+            }
+        } else {
+            viewModel.loadPurchaseRequests(wantedSearchQuery, category.id)
+        }
+    }
+
+    Scaffold() { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(paddingValues)
         ) {
-            items(categories.size){index ->
-                val category = categories[index]
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            if (selectedCategoryIndex == index) {
-                                Color(0xFF2196F3)
-                            } else {
-                                Color(0xFFE0E0E0)
+            // 商品列表：搜索框 + 分类下拉框
+            if (selectedTabIndex == 0) {
+                Box {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("搜索商品") },
+                        leadingIcon = {
+                            Row(
+                                modifier = Modifier
+                                    .clickable { expanded = true },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(selectedCategory.name, fontSize = 14.sp)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = "下拉", modifier = Modifier.size(16.dp))
                             }
-                        )
-                        .clickable { selectedCategoryIndex = index }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = category,
-                        color = if (selectedCategoryIndex == index) {
-                            Color.White
-                        } else {
-                            Color.Black
                         },
-                        fontSize = 14.sp
+                        trailingIcon = {
+                            IconButton(onClick = { onSearch() }) {
+                                Icon(Icons.Default.Search, contentDescription = "搜索")
+                            }
+                        },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        productCategories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    onCategoryChange(category)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 求购列表：搜索框 + 分类下拉框
+            if (selectedTabIndex == 1) {
+                Box {
+                    TextField(
+                        value = wantedSearchQuery,
+                        onValueChange = { wantedSearchQuery = it },
+                        placeholder = { Text("搜索求购") },
+                        leadingIcon = {
+                            Row(
+                                modifier = Modifier
+                                    .clickable { expanded = true },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(selectedCategory.name, fontSize = 14.sp)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = "下拉", modifier = Modifier.size(16.dp))
+                            }
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { onWantedSearch() }) {
+                                Icon(Icons.Default.Search, contentDescription = "搜索")
+                            }
+                        },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        productCategories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    onCategoryChange(category)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 标签页切换
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                listTabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title) }
                     )
                 }
             }
-        }
-        TabRow(
-            selectedTabIndex = selectedListIndex,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            listTabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = selectedListIndex == index,
-                    onClick = { selectedListIndex = index },
-                    text = { Text(tab) }
-                )
-            }
-        }
 
-        when {
-            isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(16.dp)
-                )
-            }
-
-            errorMessage != null -> {
-                Text(
-                    text = errorMessage ?: "未知错误",
-                    color = androidx.compose.ui.graphics.Color.Red,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-
-            else -> {
-                if (selectedListIndex == 0) {
-                    val filteredProducts = products.filter { product ->
-                        val productData =
-                            product["product"] as? Map<*, *> ?: return@filter false
-                        val title = productData["title"] as? String ?: ""
-                        val categoryId = productData["categoryId"] as? Number ?: 0
-                        val matchesSearch = searchQueue.isEmpty() || title.contains(
-                            searchQueue,
-                            ignoreCase = true
-                        )
-                        val matchesCategory =
-                            selectedCategoryIndex == 0 || categoryId.toInt() == selectedCategoryIndex
-                        matchesSearch && matchesCategory
-                    }
-                    if (filteredProducts.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "没有找到匹配的商品",
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f),
-                            contentPadding = PaddingValues(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(filteredProducts) { product ->
-                                val productData = product["product"] as? Map<*, *> ?: return@items
-                                val title = productData["title"] as? String ?: ""
-                                val price = productData["price"] as? Double ?: 0.0
-                                val seller = product["seller"] as? Map<*, *>
-                                val sellerName = seller?.get("username") as? String ?: "未知卖家"
-
-                                val productId = (productData["id"] as? Number)?.toLong() ?: 0L
-                                // 获取商品图片URL，后端字段是images（后端已自动添加完整URL）
-                                val imageUrl = productData["images"] as? String ?: ""
-                                ProductCard(
-                                    productName = title,
-                                    price = price.toString(),
-                                    location = "卖家: $sellerName",
-                                    imageUrl = imageUrl,
-                                    onClick = {
-                                        navController.navigate(Screen.ProductDetail.route.replace("{productId}", productId.toString()))
-                                    }
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
-                    ) {
-                        // 根据分类和搜索关键词过滤求购
-                        val filteredRequests = purchaseRequests.filter { request ->
-                            val title = request["title"] as? String ?: ""
-                        val categoryId = request["categoryId"] as? Number ?: 0
-
-                        // 检查搜索关键词
-                        val matchesSearch = searchQueue.isEmpty() || title.contains(
-                            searchQueue,
-                            ignoreCase = true
-                        )
-
-                        // 检查分类
-                        val matchesCategory =
-                            selectedCategoryIndex == 0 || categoryId.toInt() == selectedCategoryIndex
-
-                            matchesSearch && matchesCategory
-                        }
-
-                        // 显示过滤后的求购
-                        if (filteredRequests.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "没有找到匹配的求购",
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
-                        } else {
-                            items(filteredRequests) { request ->
-                                val title = request["title"] as? String ?: ""
-                                val maxPrice = request["maxPrice"] as? Double ?: 0.0
-                                val description = request["description"] as? String ?: ""
-
-                                val requestId = (request["id"] as? Number)?.toLong() ?: 0L
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp)
-                                        .clickable {
-                                            navController.navigate(Screen.PurchaseRequestDetail.route.replace("{purchaseRequestId}", requestId.toString()))
-                                        },
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp)
-                                    ) {
-                                        Text(
-                                            text = "发布者: ${request["buyerName"] as? String ?: "未知用户"}",
-                                            fontSize = 12.sp,
-                                            color = Color.Gray,
-                                            modifier = Modifier.padding(bottom = 4.dp)
-                                        )
-                                        Text(
-                                            text = title,
-                                            fontSize = 16.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "最高价格: ￥$maxPrice",
-                                            fontSize = 18.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                            color = Color(0xFFF44336),
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
-                                        Text(
-                                            text = description,
-                                            fontSize = 14.sp,
-                                            color = Color.Gray,
-                                            modifier = Modifier.padding(top = 8.dp)
-                                        )
-                                    }
+            // 内容区域
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        ProductListContent(
+                            products = products,
+                            isLoading = isProductsLoading,
+                            errorMessage = productsErrorMessage,
+                            onRetry = {
+                                if (searchQuery.isEmpty() && selectedCategory.id == 0) {
+                                    viewModel.loadProducts()
+                                } else {
+                                    viewModel.searchProducts(searchQuery, selectedCategory.id)
                                 }
-
+                            },
+                            onProductClick = { productId ->
+                                navController.navigate(
+                                    Screen.ProductDetail.route.replace("{productId}", productId)
+                                )
                             }
-                        }
+                        )
+                    }
+                    1 -> {
+                        WantedListContent(
+                            wantedList = wantedList,
+                            isLoading = isWantedLoading,
+                            errorMessage = wantedErrorMessage,
+                            onRetry = { viewModel.loadPurchaseRequests(wantedSearchQuery, selectedCategory.id) }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProductListContent(
+    products: List<ProductEntity>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    onProductClick: (String) -> Unit
+) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else if (errorMessage != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Button(onClick = onRetry) {
+                    Text("重试")
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(products.size) { index ->
+                val product = products[index]
+                ProductCard(
+                    productName = product.name,
+                    price = product.price.toString(),
+                    location = "卖家: ${product.sellerName}",
+                    imageUrl = product.imageUrl,
+                    onClick = { onProductClick(product.id.toString()) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WantedListContent(
+    wantedList: List<WantedEntity>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit
+) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else if (errorMessage != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Button(onClick = onRetry) {
+                    Text("重试")
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(wantedList.size) { index ->
+                val wanted = wantedList[index]
+                WantedCard(
+                    title = wanted.title,
+                    maxPrice = wanted.maxPrice.toString(),
+                    description = wanted.description,
+                    onClick = { }
+                )
             }
         }
     }

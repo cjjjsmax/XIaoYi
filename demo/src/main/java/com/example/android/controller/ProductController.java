@@ -179,11 +179,12 @@ public class ProductController {
     }
 
     @GetMapping("/list")
-    public List<Map<String, Object>> getProductList(HttpServletRequest request) {
-        List<Product> products = productService.list(
-                new QueryWrapper<Product>()
-                        .orderByDesc("created_at")
-        );
+    public List<Map<String, Object>> getProductList(@RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+        QueryWrapper<Product> queryWrapper = new QueryWrapper<Product>().orderByDesc("created_at");
+        if (categoryId != null && categoryId > 0) {
+            queryWrapper.eq("category_id", categoryId);
+        }
+        List<Product> products = productService.list(queryWrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Product product : products) {
             Map<String, Object> item = new HashMap<>();
@@ -213,15 +214,17 @@ public class ProductController {
         }
         return result;
     }
-    //搜索商品（根据标题模糊匹配）
+    //搜索商品（根据标题模糊匹配，支持分类筛选）
     @GetMapping("/search")
-    public List<Map<String, Object>> searchProducts(@RequestParam String keyword, HttpServletRequest request) {
-        List<Product> products = productService.list(
-                new QueryWrapper<Product>()
-                        .like("title", keyword)
-                        .eq("status", 1)
-                        .orderByDesc("created_at")
-        );
+    public List<Map<String, Object>> searchProducts(@RequestParam String keyword, @RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+        QueryWrapper<Product> queryWrapper = new QueryWrapper<Product>()
+                .like("title", keyword)
+                .eq("status", 1)
+                .orderByDesc("created_at");
+        if (categoryId != null && categoryId > 0) {
+            queryWrapper.eq("category_id", categoryId);
+        }
+        List<Product> products = productService.list(queryWrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Product product : products) {
             Map<String, Object> item = new HashMap<>();

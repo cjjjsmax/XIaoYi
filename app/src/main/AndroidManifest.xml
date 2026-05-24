@@ -27,6 +27,17 @@
         <service
             android:name=".service.InspectionService"
             android:exported="false" />
+        <receiver
+            android:name=".receiver.NetworkReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
+        <provider
+            android:name=".provider.ProductProvider"
+            android:authorities="com.example.xiaoyi.provider.products"
+            android:exported="false" />
     </application>
 
 </manifest>

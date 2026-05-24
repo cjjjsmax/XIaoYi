@@ -20,11 +20,18 @@ public class PurchaseRequestController {
     private UserService userService;
 
     @GetMapping("/list")
-    public List<Map<String, Object>> getPurchaseRequestList() {
-        List<PurchaseRequest> requests = purchaseRequestService.list(
-                new QueryWrapper<PurchaseRequest>()
-                        .orderByDesc("created_at")
-        );
+    public List<Map<String, Object>> getPurchaseRequestList(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer categoryId) {
+        QueryWrapper<PurchaseRequest> queryWrapper = new QueryWrapper<PurchaseRequest>()
+                .orderByDesc("created_at");
+        if (keyword != null && !keyword.isEmpty()) {
+            queryWrapper.like("title", keyword);
+        }
+        if (categoryId != null && categoryId > 0) {
+            queryWrapper.eq("category_id", categoryId);
+        }
+        List<PurchaseRequest> requests = purchaseRequestService.list(queryWrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (PurchaseRequest request : requests) {
             Map<String, Object> item = new HashMap<>();
