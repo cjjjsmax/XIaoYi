@@ -20,17 +20,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.viewmodel.AuthViewModel
+import com.example.xiaoyi.viewmodel.ViewModelFactory
 
 @Composable
 fun LoginScreen(
     navController: NavController,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel
 ) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val loginError by viewModel.loginError.collectAsState()
@@ -38,8 +40,12 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf("") }
 
+    println("LoginScreen: isLoggedIn=$isLoggedIn")
+
     LaunchedEffect(isLoggedIn) {
+        println("LoginScreen: LaunchedEffect triggered, isLoggedIn=$isLoggedIn")
         if (isLoggedIn) {
+            println("LoginScreen: Navigating to Home...")
             navController.navigate(Screen.Home.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
             }

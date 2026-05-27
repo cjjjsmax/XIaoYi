@@ -31,8 +31,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.xiaoyi.data.database.entity.ProductEntity
-import com.example.xiaoyi.data.database.entity.WantedEntity
+import com.example.xiaoyi.model.Product
+import com.example.xiaoyi.model.Wanted
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.ui.components.ProductCard
 import com.example.xiaoyi.ui.components.WantedCard
@@ -46,8 +46,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 private data class ProductCategory(val id: Int, val name: String)
 
@@ -228,14 +234,17 @@ fun ProductListScreen(
                         ProductListContent(
                             products = products,
                             isLoading = isProductsLoading,
+                            isLoadingMore = viewModel.isLoadingMore.collectAsState().value,
+                            hasMoreData = viewModel.hasMoreData.collectAsState().value,
                             errorMessage = productsErrorMessage,
                             onRetry = {
                                 if (searchQuery.isEmpty() && selectedCategory.id == 0) {
-                                    viewModel.loadProducts()
+                                    viewModel.loadProducts(isRefresh = true)
                                 } else {
-                                    viewModel.searchProducts(searchQuery, selectedCategory.id)
+                                    viewModel.searchProducts(searchQuery, selectedCategory.id,isRefresh = true)
                                 }
                             },
+                            onLoadMore = { viewModel.loadMoreProducts() },
                             onProductClick = { productId ->
                                 navController.navigate(
                                     Screen.ProductDetail.route.replace("{productId}", productId)
@@ -259,50 +268,95 @@ fun ProductListScreen(
 
 @Composable
 fun ProductListContent(
-    products: List<ProductEntity>,
+    products: List<Product>,
     isLoading: Boolean,
+    isLoadingMore: Boolean,
+    hasMoreData: Boolean,
     errorMessage: String?,
     onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
     onProductClick: (String) -> Unit
 ) {
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (errorMessage != null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                Button(onClick = onRetry) {
-                    Text("重试")
-                }
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, products, hasMoreData, isLoadingMore) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+        }.collect { lastVisibleIndex ->
+            if (lastVisibleIndex != null && lastVisibleIndex == products.size - 1 && hasMoreData && !isLoadingMore) {
+                onLoadMore()
             }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(products.size) { index ->
-                val product = products[index]
-                ProductCard(
-                    productName = product.name,
-                    price = product.price.toString(),
-                    location = "卖家: ${product.sellerName}",
-                    imageUrl = product.imageUrl,
-                    onClick = { onProductClick(product.id.toString()) }
-                )
+    }
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isRefreshing = isLoading),
+        onRefresh = onRetry
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isLoading && products.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (errorMessage != null && products.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Button(onClick = onRetry) {
+                            Text("重试")
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(products.size) { index ->
+                        val product = products[index]
+                        ProductCard(
+                            productName = product.name,
+                            price = product.price.toString(),
+                            location = "卖家: ${product.sellerName}",
+                            imageUrl = product.imageUrl,
+                            onClick = { onProductClick(product.id.toString()) }
+                        )
+                    }
+                    if (isLoadingMore) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+                    if (!hasMoreData && products.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "没有更多商品了",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -310,48 +364,55 @@ fun ProductListContent(
 
 @Composable
 fun WantedListContent(
-    wantedList: List<WantedEntity>,
+    wantedList: List<Wanted>,
     isLoading: Boolean,
     errorMessage: String?,
     onRetry: () -> Unit
 ) {
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (errorMessage != null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                Button(onClick = onRetry) {
-                    Text("重试")
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isRefreshing = isLoading),
+        onRefresh = onRetry
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isLoading && wantedList.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
-            }
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(wantedList.size) { index ->
-                val wanted = wantedList[index]
-                WantedCard(
-                    title = wanted.title,
-                    maxPrice = wanted.maxPrice.toString(),
-                    description = wanted.description,
-                    onClick = { }
-                )
+            } else if (errorMessage != null && wantedList.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Button(onClick = onRetry) {
+                            Text("重试")
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(wantedList.size) { index ->
+                        val wanted = wantedList[index]
+                        WantedCard(
+                            title = wanted.title,
+                            maxPrice = wanted.maxPrice.toString(),
+                            description = wanted.description,
+                            onClick = { }
+                        )
+                    }
+                }
             }
         }
     }

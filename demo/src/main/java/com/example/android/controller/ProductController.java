@@ -17,6 +17,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.Base64;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/products")
@@ -179,12 +180,25 @@ public class ProductController {
     }
 
     @GetMapping("/list")
-    public List<Map<String, Object>> getProductList(@RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+    public List<Map<String, Object>> getProductList(
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            HttpServletRequest request) {
+
         QueryWrapper<Product> queryWrapper = new QueryWrapper<Product>().orderByDesc("created_at");
         if (categoryId != null && categoryId > 0) {
             queryWrapper.eq("category_id", categoryId);
         }
-        List<Product> products = productService.list(queryWrapper);
+
+        int offset = (page - 1) * size;
+
+        List<Product> products = productService.list(queryWrapper)
+                .stream()
+                .skip(offset)
+                .limit(size)
+                .collect(Collectors.toList());
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (Product product : products) {
             Map<String, Object> item = new HashMap<>();
@@ -214,9 +228,14 @@ public class ProductController {
         }
         return result;
     }
-    //搜索商品（根据标题模糊匹配，支持分类筛选）
+
     @GetMapping("/search")
-    public List<Map<String, Object>> searchProducts(@RequestParam String keyword, @RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+    public List<Map<String, Object>> searchProducts(
+            @RequestParam String keyword,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            HttpServletRequest request) {
         QueryWrapper<Product> queryWrapper = new QueryWrapper<Product>()
                 .like("title", keyword)
                 .eq("status", 1)
@@ -224,7 +243,12 @@ public class ProductController {
         if (categoryId != null && categoryId > 0) {
             queryWrapper.eq("category_id", categoryId);
         }
-        List<Product> products = productService.list(queryWrapper);
+        int offset = (page - 1) * size;
+        List<Product> products = productService.list(queryWrapper)
+                .stream()
+                .skip(offset)
+                .limit(size)
+                .collect(Collectors.toList());
         List<Map<String, Object>> result = new ArrayList<>();
         for (Product product : products) {
             Map<String, Object> item = new HashMap<>();

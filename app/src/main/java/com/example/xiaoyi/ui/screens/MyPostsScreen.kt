@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.xiaoyi.data.database.entity.ProductEntity
+import com.example.xiaoyi.model.Product
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import com.example.xiaoyi.ui.components.ProductCard
@@ -58,7 +58,7 @@ fun MyPostsScreen(
 
     @Composable
     fun ProductCardWithActions(
-        product: ProductEntity,
+        product: Product,
         onEdit: () -> Unit,
         onDelete: () -> Unit
     ) {

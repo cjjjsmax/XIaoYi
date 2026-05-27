@@ -53,9 +53,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.xiaoyi.R
 import com.example.xiaoyi.model.User
 import com.example.xiaoyi.navigation.Screen
+import com.example.xiaoyi.viewmodel.AuthViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -70,7 +72,8 @@ import java.io.File
 fun ProfileScreen(
     navController: NavController,
     userId: Long,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    viewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var user by remember { mutableStateOf<User?>(null) }
@@ -96,6 +99,7 @@ fun ProfileScreen(
                 onSuccess = { avatarUrl ->
                     showUploadDialog = false
                     user = user?.copy(avatarUrl = avatarUrl)
+                    user?.let { viewModel.updateUserInfo(it) }
                     Toast.makeText(context, "头像上传成功", Toast.LENGTH_SHORT).show()
                 },
                 onError = { error ->

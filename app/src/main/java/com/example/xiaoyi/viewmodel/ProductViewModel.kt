@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.example.xiaoyi.api.PublishProductRequest
 import com.example.xiaoyi.api.PublishWantedRequest
 import com.example.xiaoyi.api.RetrofitClient
-import com.example.xiaoyi.data.database.entity.ProductEntity
-import com.example.xiaoyi.data.database.entity.WantedEntity
+import com.example.xiaoyi.model.Product
+import com.example.xiaoyi.model.Wanted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import retrofit2.Call
@@ -14,8 +14,8 @@ import retrofit2.Response
 import kotlin.collections.emptyList
 
 class ProductViewModel : ViewModel() {
-    private val _products = MutableStateFlow<List<ProductEntity>>(emptyList())
-    val products: StateFlow<List<ProductEntity>> = _products
+    private val _products = MutableStateFlow<List<Product>>(emptyList())
+    val products: StateFlow<List<Product>> = _products
 
     private val _isProductsLoading = MutableStateFlow(false)
     val isProductsLoading: StateFlow<Boolean> = _isProductsLoading
@@ -23,8 +23,8 @@ class ProductViewModel : ViewModel() {
     private val _productsErrorMessage = MutableStateFlow<String?>(null)
     val productsErrorMessage: StateFlow<String?> = _productsErrorMessage
 
-    private val _wantedList = MutableStateFlow<List<WantedEntity>>(emptyList())
-    val wantedList: StateFlow<List<WantedEntity>> = _wantedList
+    private val _wantedList = MutableStateFlow<List<Wanted>>(emptyList())
+    val wantedList: StateFlow<List<Wanted>> = _wantedList
 
     private val _isWantedLoading = MutableStateFlow(false)
     val isWantedLoading: StateFlow<Boolean> = _isWantedLoading
@@ -32,8 +32,8 @@ class ProductViewModel : ViewModel() {
     private val _wantedErrorMessage = MutableStateFlow<String?>(null)
     val wantedErrorMessage: StateFlow<String?> = _wantedErrorMessage
 
-    private val _userProducts = MutableStateFlow<List<ProductEntity>>(emptyList())
-    val userProducts: StateFlow<List<ProductEntity>> = _userProducts
+    private val _userProducts = MutableStateFlow<List<Product>>(emptyList())
+    val userProducts: StateFlow<List<Product>> = _userProducts
 
     private val _isUserProductsLoading = MutableStateFlow(false)
     val isUserProductsLoading: StateFlow<Boolean> = _isUserProductsLoading
@@ -41,8 +41,8 @@ class ProductViewModel : ViewModel() {
     private val _userProductsErrorMessage = MutableStateFlow<String?>(null)
     val userProductsErrorMessage: StateFlow<String?> = _userProductsErrorMessage
 
-    private val _userWantedList = MutableStateFlow<List<WantedEntity>>(emptyList())
-    val userWantedList: StateFlow<List<WantedEntity>> = _userWantedList
+    private val _userWantedList = MutableStateFlow<List<Wanted>>(emptyList())
+    val userWantedList: StateFlow<List<Wanted>> = _userWantedList
 
     private val _isUserWantedLoading = MutableStateFlow(false)
     val isUserWantedLoading: StateFlow<Boolean> = _isUserWantedLoading
@@ -68,14 +68,34 @@ class ProductViewModel : ViewModel() {
     private val _publishWantedErrorMessage = MutableStateFlow<String?>(null)
     val publishWantedErrorMessage: StateFlow<String?> = _publishWantedErrorMessage
 
-    fun loadProducts() {
-        _isProductsLoading.value = true
+    private var currentPage = 1
+    private val pageSize = 20
+    private val _hasMoreData = MutableStateFlow(true)
+    val hasMoreData: StateFlow<Boolean> = _hasMoreData
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
+    fun loadProducts(isRefresh: Boolean = false) {
+        if (isRefresh){
+            currentPage = 1
+            _hasMoreData.value = true
+            _isProductsLoading.value = true
+        }else{
+            _isLoadingMore.value = true
+        }
         _productsErrorMessage.value = null
 
-        val call = RetrofitClient.productApi.getProducts()
+        val call = RetrofitClient.productApi.getProducts(
+            page = currentPage,
+            size = pageSize
+        )
         call.enqueue(object : Callback<List<Map<String, Any>>> {
             override fun onFailure(call: Call<List<Map<String, Any>>?>, t: Throwable) {
-                _isProductsLoading.value = false
+                if (isRefresh){
+                    _isProductsLoading.value = false
+                }else{
+                    _isLoadingMore.value = false
+                }
                 _productsErrorMessage.value = "网络错误: ${t.message}"
             }
 
@@ -89,7 +109,7 @@ class ProductViewModel : ViewModel() {
                         val productData = productMap["product"] as? Map<String, Any> ?: return@mapNotNull null
                         val seller = productMap["seller"] as? Map<String, Any>
 
-                        ProductEntity(
+                        Product(
                             id = (productData["id"] as? Number)?.toLong() ?: 0L,
                             name = productData["title"] as? String ?: "",
                             price = (productData["price"] as? Number)?.toDouble() ?: 0.0,
@@ -97,20 +117,37 @@ class ProductViewModel : ViewModel() {
                             location = "",
                             imageUrl = productData["images"] as? String ?: "",
                             userId = (productData["sellerId"] as? Number)?.toLong() ?: 0L,
-                            createdAt = "",
+                            createdAt = productData["createdAt"]?.toString() ?: "",
                             sellerName = seller?.get("username") as? String ?: "未知卖家",
                             categoryId = (productData["categoryId"] as? Number)?.toLong() ?: 0L
                         )
                     }
-
-                    _products.value = productList
-                    _isProductsLoading.value = false
+                    if (isRefresh){
+                        _products.value = productList
+                        _isProductsLoading.value = false
+                    }else{
+                        _products.value = _products.value + productList
+                        _isLoadingMore.value = false
+                    }
+                    _hasMoreData.value = productList.size >= pageSize
+                    if (productList.isNotEmpty()) {
+                        currentPage++
+                    }
                 } else {
-                    _isProductsLoading.value = false
+                    if (isRefresh){
+                        _isProductsLoading.value = false
+                    }else{
+                        _isLoadingMore.value = false
+                    }
+
                     _productsErrorMessage.value = "加载失败: ${response.code()}"
                 }
             }
         })
+    }
+    fun loadMoreProducts() {
+        if (!_hasMoreData.value || _isLoadingMore.value) return
+        loadProducts(isRefresh = false)
     }
 
     fun loadProductsByCategory(categoryId: Int) {
@@ -134,7 +171,7 @@ class ProductViewModel : ViewModel() {
                         val productData = productMap["product"] as? Map<String, Any> ?: return@mapNotNull null
                         val seller = productMap["seller"] as? Map<String, Any>
 
-                        ProductEntity(
+                        Product(
                             id = (productData["id"] as? Number)?.toLong() ?: 0L,
                             name = productData["title"] as? String ?: "",
                             price = (productData["price"] as? Number)?.toDouble() ?: 0.0,
@@ -142,7 +179,7 @@ class ProductViewModel : ViewModel() {
                             location = "",
                             imageUrl = productData["images"] as? String ?: "",
                             userId = (productData["sellerId"] as? Number)?.toLong() ?: 0L,
-                            createdAt = "",
+                            createdAt = productData["createdAt"]?.toString() ?: "",
                             sellerName = seller?.get("username") as? String ?: "未知卖家",
                             categoryId = (productData["categoryId"] as? Number)?.toLong() ?: 0L
                         )
@@ -158,7 +195,11 @@ class ProductViewModel : ViewModel() {
         })
     }
 
-    fun searchProducts(keyword: String, categoryId: Int = 0) {
+    fun searchProducts(keyword: String, categoryId: Int = 0,isRefresh: Boolean = false) {
+        if (isRefresh) {
+            currentPage = 1
+            _hasMoreData.value = true
+        }
         _isProductsLoading.value = true
         _productsErrorMessage.value = null
 
@@ -180,7 +221,7 @@ class ProductViewModel : ViewModel() {
                         val productData = productMap["product"] as? Map<String, Any> ?: return@mapNotNull null
                         val seller = productMap["seller"] as? Map<String, Any>
 
-                        ProductEntity(
+                        Product(
                             id = (productData["id"] as? Number)?.toLong() ?: 0L,
                             name = productData["title"] as? String ?: "",
                             price = (productData["price"] as? Number)?.toDouble() ?: 0.0,
@@ -188,7 +229,7 @@ class ProductViewModel : ViewModel() {
                             location = "",
                             imageUrl = productData["images"] as? String ?: "",
                             userId = (productData["sellerId"] as? Number)?.toLong() ?: 0L,
-                            createdAt = "",
+                            createdAt = productData["createdAt"]?.toString() ?: "",
                             sellerName = seller?.get("username") as? String ?: "未知卖家",
                             categoryId = (productData["categoryId"] as? Number)?.toLong() ?: 0L
                         )
@@ -223,7 +264,7 @@ class ProductViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     val apiWantedList = response.body() ?: emptyList()
                     val wantedEntities = apiWantedList.mapNotNull { wantedMap ->
-                        WantedEntity(
+                        Wanted(
                             id = (wantedMap["id"] as? Number)?.toLong() ?: 0L,
                             title = wantedMap["title"] as? String ?: "",
                             description = wantedMap["description"] as? String ?: "",
@@ -269,7 +310,7 @@ class ProductViewModel : ViewModel() {
                         val productData = productMap["product"] as? Map<String, Any> ?: return@mapNotNull null
                         val seller = productMap["seller"] as? Map<String, Any>
 
-                        ProductEntity(
+                        Product(
                             id = (productData["id"] as? Number)?.toLong() ?: 0L,
                             name = productData["title"] as? String ?: "",
                             price = (productData["price"] as? Number)?.toDouble() ?: 0.0,
@@ -277,7 +318,7 @@ class ProductViewModel : ViewModel() {
                             location = "",
                             imageUrl = productData["images"] as? String ?: "",
                             userId = (productData["sellerId"] as? Number)?.toLong() ?: 0L,
-                            createdAt = "",
+                            createdAt = productData["createdAt"]?.toString() ?: "",
                             sellerName = seller?.get("username") as? String ?: "未知卖家",
                             categoryId = (productData["categoryId"] as? Number)?.toLong() ?: 0L
                         )
@@ -311,7 +352,7 @@ class ProductViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     val apiWantedList = response.body() ?: emptyList()
                     val wantedEntities = apiWantedList.mapNotNull { wantedMap ->
-                        WantedEntity(
+                        Wanted(
                             id = (wantedMap["id"] as? Number)?.toLong() ?: 0L,
                             title = wantedMap["title"] as? String ?: "",
                             description = wantedMap["description"] as? String ?: "",

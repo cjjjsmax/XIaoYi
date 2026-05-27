@@ -8,5 +8,7 @@ data class Product(
     val location: String,//商品位置
     val imageUrl: String,//商品图片
     val userId: Long,//卖家ID
-    val createdAt: String//商品发布时间
+    val createdAt: String,//商品发布时间
+    val sellerName: String = "未知卖家",//卖家名称
+    val categoryId: Long = 0L//分类ID
 )

@@ -28,6 +28,7 @@ import com.example.xiaoyi.ui.screens.AddAddressScreen
 import com.example.xiaoyi.ui.screens.AddressManagementScreen
 import com.example.xiaoyi.ui.screens.EditAddressScreen
 import com.example.xiaoyi.utils.UserManager
+import com.example.xiaoyi.viewmodel.AuthViewModel
 
 sealed class Screen(val route: String){
     object Login : Screen("login")
@@ -58,6 +59,7 @@ sealed class Screen(val route: String){
 fun AppNavigation(
     navController: androidx.navigation.NavHostController,
     startDestination: String = Screen.Login.route,
+    authViewModel: AuthViewModel,
     onLoginSuccess: () -> Unit = {},
     onLogout: () -> Unit = {},
     userId: Long,
@@ -70,6 +72,7 @@ fun AppNavigation(
         composable(Screen.Login.route) {
             LoginScreen(
                 navController = navController,
+                viewModel = authViewModel
             )
         }
         composable ( Screen.Register.route ){

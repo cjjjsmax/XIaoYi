@@ -50,13 +50,6 @@ interface ProductApi{
     @GET("/api/products/list")
     fun getProductsByCategory(@Query("categoryId") categoryId: Int): Call<List<Map<String, Any>>>
 
-    //搜索商品（根据标题模糊匹配，支持分类筛选）
-    @GET("/api/products/search")
-    fun searchProducts(
-        @Query("keyword") keyword: String,
-        @Query("categoryId") categoryId: Int = 0
-    ): Call<List<Map<String, Any>>>
-    
     //获取求购列表（支持关键词搜索和分类筛选）
     @GET("/api/purchase-requests/list")
     fun getPurchaseRequests(
@@ -112,4 +105,17 @@ interface ProductApi{
     //获取用户求购
     @GET("/api/purchase-requests/user")
     fun getUserPurchaseRequests(@Query("buyerId") buyerId: Long): Call<List<Map<String, Any>>>
+
+    @GET("/api/products/list")
+    fun getProducts(@Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+
+    @GET("/api/products/list")
+    fun getProductsByCategory(@Query("categoryId") categoryId: Int, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+
+    @GET("/api/products/search")
+    fun searchProducts(@Query("keyword") keyword: String, @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+
+    @GET("/api/purchase-requests/list")
+    fun getPurchaseRequests(@Query("keyword") keyword: String = "", @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+
 }
