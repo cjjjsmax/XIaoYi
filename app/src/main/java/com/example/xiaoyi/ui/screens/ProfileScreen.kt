@@ -73,7 +73,7 @@ fun ProfileScreen(
     navController: NavController,
     userId: Long,
     paddingValues: PaddingValues,
-    viewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
     var user by remember { mutableStateOf<User?>(null) }
@@ -99,7 +99,7 @@ fun ProfileScreen(
                 onSuccess = { avatarUrl ->
                     showUploadDialog = false
                     user = user?.copy(avatarUrl = avatarUrl)
-                    user?.let { viewModel.updateUserInfo(it) }
+                    user?.let { authViewModel.updateUserInfo(it) }
                     Toast.makeText(context, "头像上传成功", Toast.LENGTH_SHORT).show()
                 },
                 onError = { error ->

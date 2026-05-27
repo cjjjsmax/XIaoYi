@@ -14,7 +14,8 @@ fun User.toEntity(): UserEntity {
         phone = this.phone,
         school = this.school,
         creditScore = this.creditScore,
-        createdAt = this.createdAt
+        createdAt = this.createdAt,
+        token = this.token
     )
 }
 fun UserEntity.toModel(): User {
@@ -27,7 +28,8 @@ fun UserEntity.toModel(): User {
         phone = this.phone,
         school = this.school,
         creditScore = this.creditScore,
-        createdAt = this.createdAt
+        createdAt = this.createdAt,
+        token = this.token
     )
 }
 class UserExtensions {

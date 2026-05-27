@@ -14,5 +14,6 @@ data class UserEntity(
     val phone: String = "",//手机号码
     val school: String = "",//学校
     val creditScore: String = "",//信誉值
-    val createdAt: Long = System.currentTimeMillis()//创建时间
+    val createdAt: Long = System.currentTimeMillis(),//创建时间
+    val token: String = ""
 )

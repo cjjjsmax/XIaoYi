@@ -56,6 +56,7 @@ class AuthViewModel(private val appDatabase: AppDatabase) : ViewModel() {
                             println("AuthViewModel: data=$data")
                             if (data != null) {
                                 val userData = data["user"] as? Map<String, Any>
+                                val token = data["token"] as? String ?: ""
                                 println("AuthViewModel: userData=$userData")
                                 if (userData != null) {
                                     val user = User(
@@ -67,10 +68,11 @@ class AuthViewModel(private val appDatabase: AppDatabase) : ViewModel() {
                                         phone = userData["phone"] as? String ?: "",
                                         school = userData["school"] as? String ?: "",
                                         creditScore = (userData["creditScore"] as? Number)?.toString() ?: "",
-                                        createdAt = System.currentTimeMillis()
+                                        createdAt = System.currentTimeMillis(),
+                                        token = token
                                     )
                                     println("AuthViewModel: User created, id=${user.id}, username=${user.username}")
-                                    UserManager.login(user)
+                                    UserManager.login(user, token)
                                     println("AuthViewModel: Setting isLoggedIn to true")
                                     _isLoggedIn.value = true
                                     viewModelScope.launch(Dispatchers.IO) {
@@ -119,8 +121,10 @@ class AuthViewModel(private val appDatabase: AppDatabase) : ViewModel() {
             if (users.isNotEmpty()) {
                 val cachedUser = users.first()
                 val user = cachedUser.toModel()
-                UserManager.login(user)
-                _isLoggedIn.value = true
+                if (user.token.isNotEmpty()) {
+                    UserManager.login(user, user.token)
+                    _isLoggedIn.value = true
+                }
             }
         }
     }

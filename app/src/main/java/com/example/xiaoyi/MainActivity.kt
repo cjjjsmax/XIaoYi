@@ -1,6 +1,8 @@
 package com.example.xiaoyi
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.api.interceptor.TokenExpiredInterceptor
 import com.example.xiaoyi.navigation.AppNavigation
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.ui.components.BottomNavBar
@@ -30,6 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         UserManager.init(applicationContext)
+        RetrofitClient.init(applicationContext)
         setContent {
             XiaoYiTheme {
                 MainScreen()

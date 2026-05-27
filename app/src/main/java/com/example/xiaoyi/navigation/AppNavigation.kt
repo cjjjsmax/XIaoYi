@@ -99,7 +99,8 @@ fun AppNavigation(
             ProfileScreen(
                 navController = navController,
                 userId = userId,
-                paddingValues = paddingValues
+                paddingValues = paddingValues,
+                authViewModel = authViewModel
             )
         }
         composable(
@@ -124,7 +125,8 @@ fun AppNavigation(
             ProfileScreen(
                 navController = navController,
                 userId = userId,
-                paddingValues = paddingValues
+                paddingValues = paddingValues,
+                authViewModel = authViewModel
             )
         }
         composable(Screen.Conversations.route) {
