@@ -9,6 +9,7 @@ import com.example.xiaoyi.api.MessageApi
 import com.example.xiaoyi.api.ConversationApi
 import com.example.xiaoyi.api.AddressApi
 import com.example.xiaoyi.api.interceptor.AuthInterceptor
+import com.example.xiaoyi.api.interceptor.RetryInterceptor
 import com.example.xiaoyi.api.interceptor.TokenExpiredInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -43,9 +44,15 @@ object RetrofitClient {
             .connectTimeout(300, TimeUnit.SECONDS)
             .readTimeout(300, TimeUnit.SECONDS)
             .writeTimeout(300, TimeUnit.SECONDS)
-            .addInterceptor(loggingInterceptor)
             .addInterceptor(authInterceptor)
+            .addInterceptor(
+                RetryInterceptor(
+                    maxRetries = 3,
+                    retryDelayMs = 1000
+                )
+            )
             .addInterceptor(tokenExpiredInterceptor)
+            .addInterceptor(loggingInterceptor)
             .build()
     }
 
