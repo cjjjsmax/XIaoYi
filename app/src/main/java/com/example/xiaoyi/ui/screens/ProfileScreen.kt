@@ -25,7 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.xiaoyi.R
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.model.User
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.viewmodel.AuthViewModel
@@ -80,12 +80,10 @@ fun ProfileScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     var showImagePicker by remember { mutableStateOf(false) }
-    var showUploadDialog by remember { mutableStateOf(false) }
-    var uploadProgress by remember { mutableStateOf(0f) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent()//选择单张图片
     ) { uri: Uri? ->
         if (uri != null) {
             selectedImageUri = uri
@@ -93,21 +91,15 @@ fun ProfileScreen(
                 context = context,
                 imageUri = uri,
                 userId = userId,
-                onProgress = { progress ->
-                    uploadProgress = progress
-                },
                 onSuccess = { avatarUrl ->
-                    showUploadDialog = false
                     user = user?.copy(avatarUrl = avatarUrl)
                     user?.let { authViewModel.updateUserInfo(it) }
                     Toast.makeText(context, "头像上传成功", Toast.LENGTH_SHORT).show()
                 },
                 onError = { error ->
-                    showUploadDialog = false
                     Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                 }
             )
-            showUploadDialog = true
         }
     }
     LaunchedEffect(userId) {
@@ -167,11 +159,12 @@ fun ProfileScreen(
                         .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding( 16.dp)
                         .clickable {
-                            showImagePicker = true
+                            showImagePicker = true//点击弹出选择对话框
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
+                        //显示用户名首字母作为默认头像
                         text = user!!.username.firstOrNull()?.toString() ?: "U",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -190,9 +183,10 @@ fun ProfileScreen(
                         Text(
                             text = user!!.username,
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+
                         )
-                        Spacer(modifier = Modifier.width(200.dp))
                         IconButton(
                             onClick = {
                                 navController.navigate(
@@ -222,7 +216,7 @@ fun ProfileScreen(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            ProfileMenuTtem(
+            ProfileMenuItem(
                 title = "我的发布",
                 iconRes = R.drawable.release_commodities,
                 onClick = {
@@ -234,7 +228,7 @@ fun ProfileScreen(
                     )
                 }
             )
-            ProfileMenuTtem(
+            ProfileMenuItem(
                 title = "我的求购",
                 iconRes = R.drawable.publish_purchase,
                 onClick = {
@@ -246,7 +240,7 @@ fun ProfileScreen(
                     )
                 }
             )
-            ProfileMenuTtem(
+            ProfileMenuItem(
                 title = "我的订单",
                 iconRes = R.drawable.transaction_completed,
                 onClick = {
@@ -280,7 +274,7 @@ fun ProfileScreen(
                 TextButton(
                     onClick = {
                         showImagePicker = false
-                        imagePickerLauncher.launch("image/*")
+                        imagePickerLauncher.launch("image/*")//打开相册
                     }
                 ) {
                     Text("从相册选择")
@@ -297,52 +291,11 @@ fun ProfileScreen(
             }
         )
     }
-    if (showUploadDialog) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = {
-                Text(
-                    text = "上传头像",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "正在上传，请稍候...",
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    LinearProgressIndicator(
-                        progress = uploadProgress,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = "${(uploadProgress * 100).toInt()}%",
-                        fontSize = 14.sp,  // 字体大小
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showUploadDialog = false
-                    }
-                ) {
-                    Text("取消")
-                }
-            }
-        )
-    }
 }
 
+//菜单组件
 @Composable
-private fun ProfileMenuTtem(
+private fun ProfileMenuItem(
     title: String,
     iconRes: Int,
     onClick: () -> Unit
@@ -384,6 +337,7 @@ private fun ProfileMenuTtem(
     }
 }
 
+//加载用户信息
 private fun loadUserInfo(
     userId: Long,
     onSuccess: (User) -> Unit,
@@ -391,17 +345,17 @@ private fun loadUserInfo(
 ) {
     try {
         val call = RetrofitClient.userApi.getUserById(userId)
-        call.enqueue(object : Callback<Map<String, Any>> {
+        call.enqueue(object : Callback<Result<Map<String, Any>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<Map<String, Any>>>,
+                response: Response<Result<Map<String, Any>>>
             ) {
                 try {
                     if (response.isSuccessful) {
-                        val userData = response.body()
-                        if (userData != null) {
+                        val result = response.body()
+                        if (result != null && result.isSuccess()) {
                             // 获取data字段
-                            val data = userData["data"] as? Map<*, *> ?: emptyMap<Any, Any>()
+                            val data = result.data ?: emptyMap<String, Any>()
 
                             // 安全处理各个字段 - 支持多种命名方式
                             val id = (data["id"] as? Number)?.toLong() ?: 0L
@@ -470,7 +424,7 @@ private fun loadUserInfo(
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
                 onError("网络错误: ${t.message} ")
             }
         })
@@ -479,26 +433,23 @@ private fun loadUserInfo(
     }
 }
 
+//上传头像
 private fun uploadAvatar(
     context: Context,
     imageUri: Uri,
     userId: Long,
-    onProgress: (Float) -> Unit,
     onSuccess: (String) -> Unit,
     onError: (String) -> Unit
 ) {
     Thread {
         try {
-            for (i in 0..100 step 10) {
-                Thread.sleep(100)
-                onProgress(i / 100f)
-            }
             val contentResolver = context.contentResolver
             val inputStream = contentResolver.openInputStream(imageUri)
 
             if (inputStream != null) {
                 val tempFile = File(context.cacheDir, "avatar_temp.jpg")
                 tempFile.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
+                //创建Multipart请求体
                 val requestFile = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData(
                     "file",
@@ -506,20 +457,21 @@ private fun uploadAvatar(
                     requestFile
                 )
                 val userIdBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                //上传头像
                 val call = RetrofitClient.userApi.uploadAvatar(body, userIdBody)
-                call.enqueue(object : Callback<Map<String, Any>> {
+                call.enqueue(object : Callback<Result<Map<String, Any>>> {
                     override fun onResponse(
-                        call: Call<Map<String, Any>>,
-                        response: Response<Map<String, Any>>
+                        call: Call<Result<Map<String, Any>>>,
+                        response: Response<Result<Map<String, Any>>>
                     ) {
                         if (response.isSuccessful) {
-                            val responseData = response.body()
-                            if (responseData != null && responseData["code"] == 200) {
-                                val data = responseData["data"] as? Map<*, *>
-                                val avatarUrl = data?.get("avatarUrl") as? String ?: ""
+                            val result = response.body()
+                            if (result != null && result.isSuccess()) {
+                                val data = result.data ?: emptyMap<String, Any>()
+                                val avatarUrl = data["avatarUrl"] as? String ?: data["avatar_url"] as? String ?: ""
                                 onSuccess(avatarUrl)
                             } else {
-                                onError(responseData?.get("message") as? String ?: "上传失败")
+                                onError(result?.message ?: "上传失败")
                             }
                         } else {
                             onError("上传失败: ${response.code()}")
@@ -527,7 +479,7 @@ private fun uploadAvatar(
                         tempFile.delete()
                     }
 
-                    override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
                         onError("网络错误: ${t.message}")
                         tempFile.delete()
                     }

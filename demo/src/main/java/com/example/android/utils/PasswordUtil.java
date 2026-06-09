@@ -3,6 +3,7 @@ package com.example.android.utils;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+//密码工具类
 public class PasswordUtil {
     private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 

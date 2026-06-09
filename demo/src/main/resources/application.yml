@@ -36,3 +36,7 @@ zhipu:
     api-key: 6a97e9f0357741c4a76cf5c8e2576247.ynUECmumCZTmwK0d
     api-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
     model: GLM-5V-Turbo
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY:campus_secondhand_secret_key_campus_secondhand_secret_key}
+  expiration-time: ${JWT_EXPIRATION_TIME:86400000}

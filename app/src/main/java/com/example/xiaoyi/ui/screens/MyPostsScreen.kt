@@ -38,7 +38,6 @@ import com.example.xiaoyi.viewmodel.ProductViewModel
 fun MyPostsScreen(
     navController: NavController,
     userId: Long,
-    paddingValues: PaddingValues,
     viewModel: ProductViewModel = viewModel()
 ) {
     val userProducts by viewModel.userProducts.collectAsState()
@@ -52,8 +51,8 @@ fun MyPostsScreen(
     }
 
     fun deleteProduct(productId: Long) {
-        viewModel.deleteProduct(productId)
-        viewModel.loadUserProducts(userId)
+        viewModel.deleteProduct(productId)//调用ViewModel执行删除
+        viewModel.loadUserProducts(userId)//重新加载用户商品列表
     }
 
     @Composable
@@ -68,7 +67,7 @@ fun MyPostsScreen(
                 price = product.price.toString(),
                 location = "卖家: ${product.sellerName}",
                 imageUrl = product.imageUrl,
-                onClick = { }
+                onClick = { }//卡片点击无响应有单独的编辑按钮
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -105,6 +104,7 @@ fun MyPostsScreen(
                 )
             }
         } else {
+            //垂直网格布局
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
@@ -139,7 +139,7 @@ fun MyPostsScreen(
             text = {
                 Text("确定要删除这个商品吗？删除后无法恢复。")
             },
-            confirmButton = {
+            confirmButton = {//确认按钮
                 TextButton(
                     onClick = {
                         deleteProduct(selectedProductId)
@@ -149,7 +149,7 @@ fun MyPostsScreen(
                     Text("确定")
                 }
             },
-            dismissButton = {
+            dismissButton = {//取消按钮
                 TextButton(
                     onClick = {
                         showDeleteDialog = false

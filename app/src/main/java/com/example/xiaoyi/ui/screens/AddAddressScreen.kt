@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
 import com.example.xiaoyi.model.AddressRequest
 import com.example.xiaoyi.model.Region
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import com.example.xiaoyi.ui.components.RegionSelectDialog
 import retrofit2.Call
@@ -69,51 +70,44 @@ fun AddAddressScreen(
     var showDistrictDialog by remember { mutableStateOf(false) }
     var showStreetDialog by remember { mutableStateOf(false) }
 
-    // 判断是否需要显示下级地区（直辖市和部分自治区不需要）
+    //判断是否需要显示下级地区（直辖市和部分自治区不需要）
     fun shouldShowNextLevel(region: Region?): Boolean {
         if (region == null) return false
-        // 直辖市：北京、上海、天津、重庆
-        // 直辖市既是省也是市，不需要显示下级城市
+        //直辖市：北京、上海、天津、重庆
+        //直辖市既是省也是市，不需要显示下级城市
         val municipalities = listOf("北京市", "上海市", "天津市", "重庆市")
         return !municipalities.contains(region.name)
     }
 
     fun loadProvinces() {
         isLoading = true
-        RetrofitClient.addressApi.getRegions("0").enqueue(object : Callback<Map<String, Any>> {
+        RetrofitClient.addressApi.getRegions("0").enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        val dataObj = responseBody["data"]
-                        if (dataObj is List<*>) {
-                            @Suppress("UNCHECKED_CAST")
-                            val regionList = dataObj as List<Map<String, Any>>
-                            provinces = regionList.mapNotNull { item ->
-                                // 后端返回的字段名是 id, name, code, parentId, level
-                                val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
-                                val name = item["name"] as? String ?: return@mapNotNull null
-                                val code = item["code"] as? String ?: ""
-                                val parentId = item["parentId"] as? String ?: ""
-                                val level = (item["level"] as? Number)?.toInt() ?: 0
-                                Region(id, name, parentId, level, code)
-                            }
-                        } else {
-                            errorMessage = "数据格式错误"
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val dataList = result.data ?: emptyList()
+                        provinces = dataList.mapNotNull { item ->
+                            val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
+                            val name = item["name"] as? String ?: return@mapNotNull null
+                            val code = item["code"] as? String ?: ""
+                            val parentId = item["parentId"] as? String ?: ""
+                            val level = (item["level"] as? Number)?.toInt() ?: 0
+                            Region(id, name, parentId, level, code)
                         }
                     } else {
-                        errorMessage = "网络请求失败"
+                        errorMessage = result?.message ?: "网络请求失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 isLoading = false
                 errorMessage = "网络错误: ${t.message}"
             }
@@ -122,20 +116,17 @@ fun AddAddressScreen(
 
     fun loadCities(parentId: String) {
         isLoading = true
-        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Map<String, Any>> {
+        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        val dataObj = responseBody["data"]
-                        if (dataObj is List<*>) {
-                            @Suppress("UNCHECKED_CAST")
-                            val regionList = dataObj as List<Map<String, Any>>
-                            cities = regionList.mapNotNull { item ->
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val dataList = result.data ?: emptyList()
+                        cities = dataList.mapNotNull { item ->
                                 val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
                                 val name = item["name"] as? String ?: return@mapNotNull null
                                 val code = item["code"] as? String ?: ""
@@ -143,14 +134,15 @@ fun AddAddressScreen(
                                 val level = (item["level"] as? Number)?.toInt() ?: 0
                                 Region(id, name, parentId, level, code)
                             }
-                        }
+                    } else {
+                        errorMessage = result?.message ?: "网络请求失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 isLoading = false
                 errorMessage = "网络错误: ${t.message}"
             }
@@ -159,35 +151,33 @@ fun AddAddressScreen(
 
     fun loadDistricts(parentId: String) {
         isLoading = true
-        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Map<String, Any>> {
+        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        val dataObj = responseBody["data"]
-                        if (dataObj is List<*>) {
-                            @Suppress("UNCHECKED_CAST")
-                            val regionList = dataObj as List<Map<String, Any>>
-                            districts = regionList.mapNotNull { item ->
-                                val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
-                                val name = item["name"] as? String ?: return@mapNotNull null
-                                val code = item["code"] as? String ?: ""
-                                val parentId = item["parentId"] as? String ?: ""
-                                val level = (item["level"] as? Number)?.toInt() ?: 0
-                                Region(id, name, parentId, level, code)
-                            }
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val dataList = result.data ?: emptyList()
+                        districts = dataList.mapNotNull { item ->
+                            val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
+                            val name = item["name"] as? String ?: return@mapNotNull null
+                            val code = item["code"] as? String ?: ""
+                            val parentId = item["parentId"] as? String ?: ""
+                            val level = (item["level"] as? Number)?.toInt() ?: 0
+                            Region(id, name, parentId, level, code)
                         }
+                    } else {
+                        errorMessage = result?.message ?: "网络请求失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 isLoading = false
                 errorMessage = "网络错误: ${t.message}"
             }
@@ -196,35 +186,33 @@ fun AddAddressScreen(
 
     fun loadStreets(parentId: String) {
         isLoading = true
-        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Map<String, Any>> {
+        RetrofitClient.addressApi.getRegions(parentId).enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        val dataObj = responseBody["data"]
-                        if (dataObj is List<*>) {
-                            @Suppress("UNCHECKED_CAST")
-                            val regionList = dataObj as List<Map<String, Any>>
-                            streets = regionList.mapNotNull { item ->
-                                val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
-                                val name = item["name"] as? String ?: return@mapNotNull null
-                                val code = item["code"] as? String ?: ""
-                                val parentId = item["parentId"] as? String ?: ""
-                                val level = (item["level"] as? Number)?.toInt() ?: 0
-                                Region(id, name, parentId, level, code)
-                            }
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val dataList = result.data ?: emptyList()
+                        streets = dataList.mapNotNull { item ->
+                            val id = (item["id"] as? Number)?.toLong() ?: return@mapNotNull null
+                            val name = item["name"] as? String ?: return@mapNotNull null
+                            val code = item["code"] as? String ?: ""
+                            val parentId = item["parentId"] as? String ?: ""
+                            val level = (item["level"] as? Number)?.toInt() ?: 0
+                            Region(id, name, parentId, level, code)
                         }
+                    } else {
+                        errorMessage = result?.message ?: "网络请求失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 isLoading = false
                 errorMessage = "网络错误: ${t.message}"
             }
@@ -232,7 +220,7 @@ fun AddAddressScreen(
     }
 
     fun submitAddress() {
-        // 清除之前的表单错误
+        //清除之前的表单错误
         formErrorMessage = null
 
         if (receiverName.isEmpty()) {
@@ -243,7 +231,7 @@ fun AddAddressScreen(
             formErrorMessage = "请选择省份"
             return
         }
-        // 城市验证：直辖市情况下 selectedCity 可能等于 selectedProvince
+        //城市验证
         if (selectedCity == null) {
             formErrorMessage = "请选择城市"
             return
@@ -254,7 +242,7 @@ fun AddAddressScreen(
         }
 
         try {
-            // 根据是否为直辖市/自治区来决定 city 的值
+            //根据是否为直辖市/自治区来决定city的值
             val cityValue = if (shouldShowNextLevel(selectedProvince)) {
                 selectedCity?.name ?: ""
             } else {
@@ -272,38 +260,38 @@ fun AddAddressScreen(
                 isDefault = if (isDefault) 1 else 0
             )
 
-            // 打印发送的数据用于调试
+            //打印发送的数据用于调试
             android.util.Log.d("AddAddress", "Sending address data: $addressRequest")
 
             isLoading = true
             
-            // 添加超时处理
+            //添加超时处理
             scope.launch {
-                delay(15000) // 15秒超时
+                delay(15000) //15秒超时
                 if (isLoading) {
                     isLoading = false
                     errorMessage = "请求超时，请重试"
                 }
             }
             
-            // 打印即将发送请求的日志
+            //打印即将发送请求的日志
             android.util.Log.d("AddAddress", "About to call createAddress API")
             
-            RetrofitClient.addressApi.createAddress(addressRequest).enqueue(object : Callback<Map<String, Any>> {
+            RetrofitClient.addressApi.createAddress(addressRequest).enqueue(object : Callback<Result<String>> {
                 override fun onResponse(
-                    call: Call<Map<String, Any>>,
-                    response: Response<Map<String, Any>>
+                    call: Call<Result<String>>,
+                    response: Response<Result<String>>
                 ) {
                     android.util.Log.d("AddAddress", "onResponse called, isSuccessful: ${response.isSuccessful}, code: ${response.code()}")
                     isLoading = false
                     if (response.isSuccessful) {
-                        val data = response.body()
-                        android.util.Log.d("AddAddress", "Response body: $data")
-                        if (data != null && data.containsKey("success") && data["success"] == true) {
+                        val result = response.body()
+                        android.util.Log.d("AddAddress", "Response body: $result")
+                        if (result != null && result.isSuccess()) {
                             android.util.Log.d("AddAddress", "Address added successfully, navigating back")
                             navController.popBackStack()
                         } else {
-                            val message = data?.get("message")?.toString()
+                            val message = result?.message
                             errorMessage = if (message.isNullOrEmpty()) "添加失败" else message
                             android.util.Log.d("AddAddress", "Add failed: $errorMessage")
                         }
@@ -313,7 +301,7 @@ fun AddAddressScreen(
                     }
                 }
 
-                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                override fun onFailure(call: Call<Result<String>>, t: Throwable) {
                     android.util.Log.e("AddAddress", "onFailure called: ${t.message}", t)
                     isLoading = false
                     errorMessage = "网络错误: ${t.message}"
@@ -362,7 +350,7 @@ fun AddAddressScreen(
                         modifier = Modifier.fillMaxWidth(),
                         readOnly = true
                     )
-                    // 在输入框上层添加一个透明的可点击层
+                    //在输入框上层添加一个透明的可点击层
                     Box(
                         modifier = Modifier
                             .matchParentSize()
@@ -370,7 +358,7 @@ fun AddAddressScreen(
                     )
                 }
 
-                // 只有当不是直辖市/自治区时才显示城市选择
+                //只有当不是直辖市/自治区时才显示城市选择
                 if (selectedProvince != null && shouldShowNextLevel(selectedProvince)) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
@@ -466,7 +454,7 @@ fun AddAddressScreen(
         }
     }
 
-    // 弹窗必须放在布局顶层
+    //弹窗必须放在布局顶层
     if (showProvinceDialog) {
         RegionSelectDialog(
             title = "选择省份",

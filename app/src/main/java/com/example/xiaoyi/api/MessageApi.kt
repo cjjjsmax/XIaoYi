@@ -1,6 +1,7 @@
 package com.example.xiaoyi.api
 
 
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.model.SendMessageRequest
 import retrofit2.Call
 import retrofit2.http.Body
@@ -12,18 +13,18 @@ import retrofit2.http.Query
 
 interface MessageApi {
     @GET("/api/messages/list")
-    fun getMessages(@Query("userId") userId: Long): Call<Map<String, Any>>
+    fun getMessages(@Query("userId") userId: Long): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/messages/conversation/{conversationId}")
-    fun getConversationMessages(@Path("conversationId") conversationId: Long): Call<Map<String, Any>>
+    fun getConversationMessages(@Path("conversationId") conversationId: Long): Call<Result<List<Map<String, Any>>>>
 
     @POST("/api/messages/send")
-    fun sendMessage(@Body request: SendMessageRequest): Call<Map<String, Any>>
+    fun sendMessage(@Body request: SendMessageRequest): Call<Result<String>>
 
     @PUT("/api/messages/read/{messageId}")
-    fun markAsRead(@Path("messageId") messageId: Long): Call<Map<String, Any>>
+    fun markAsRead(@Path("messageId") messageId: Long): Call<Result<String>>
 
     @PUT("/api/messages/read/conversation/{conversationId}")
-    fun markAsRead(@Path("conversationId") conversationId: Long, @Query("userId") userId: Long): Call<Map<String, Any>>
+    fun markAsRead(@Path("conversationId") conversationId: Long, @Query("userId") userId: Long): Call<Result<String>>
 
 }

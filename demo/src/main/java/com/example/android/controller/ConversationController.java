@@ -1,11 +1,11 @@
 package com.example.android.controller;
 
+import com.example.android.common.Result;
 import com.example.android.entity.Conversation;
 import com.example.android.service.ConversationService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,36 +16,33 @@ public class ConversationController {
     private ConversationService conversationService;
 
     @GetMapping("/list")
-    public Map<String, Object> getConversations(@RequestParam Long userId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<List<Map<String, Object>>> getConversations(@RequestParam Long userId) {
         try {
             List<Map<String, Object>> conversations = conversationService.getConversationsWithLatestMessage(userId);
-            result.put("success", true);
-            result.put("data", conversations);
+            return Result.success("获取成功", conversations);
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取会话列表失败: " + e.getMessage());
         }
-        return result;
     }
 
     @GetMapping("/detail/{conversationId}")
-    public Map<String, Object> getConversationDetail(@PathVariable Long conversationId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<Map<String, Object>> getConversationDetail(@PathVariable Long conversationId) {
         try {
-            Map<String , Object> conversation = conversationService.getConversationDetail(conversationId);
-            result.put("success", true);
-            result.put("data", conversation);
+            Map<String, Object> conversation = conversationService.getConversationDetail(conversationId);
+            if (conversation != null) {
+                return Result.success("获取成功", conversation);
+            } else {
+                return Result.notFound("会话不存在");
+            }
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取会话详情失败: " + e.getMessage());
         }
-        return result;
     }
 
     @PostMapping("/create")
-    public Map<String, Object> createConversation(@RequestBody Map<String, Object> request) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<Long> createConversation(@RequestBody Map<String, Object> request) {
         try {
             Long initiatorId = ((Number) request.get("initiatorId")).longValue();
             Long receiverId = ((Number) request.get("receiverId")).longValue();
@@ -53,43 +50,35 @@ public class ConversationController {
             String type = (String) request.get("type");
 
             Long conversationId = conversationService.createConversation(initiatorId, receiverId, productId, type);
-            result.put("success", true);
-            result.put("data", conversationId);
+            return Result.success("创建成功", conversationId);
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("创建会话失败: " + e.getMessage());
         }
-        return result;
     }
 
     @PutMapping("/close/{conversationId}")
-    public Map<String, Object> closeConversation(@PathVariable Long conversationId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<String> closeConversation(@PathVariable Long conversationId) {
         try {
             boolean success = conversationService.closeConversation(conversationId);
-            result.put("success", success);
-            result.put("message", success ? "关闭成功" : "关闭失败");
+            return success ? Result.success("关闭成功") : Result.error("关闭失败");
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("关闭会话失败: " + e.getMessage());
         }
-        return result;
     }
 
     @GetMapping("/find")
-    public Map<String, Object> findConversation(
+    public Result<Conversation> findConversation(
             @RequestParam Long userId1,
             @RequestParam Long userId2
     ) {
-        Map<String, Object> result = new HashMap<>();
         try {
             Conversation conversation = conversationService.findConversation(userId1, userId2);
-            result.put("success", true);
-            result.put("data", conversation);
+            return Result.success("获取成功", conversation);
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("查找会话失败: " + e.getMessage());
         }
-        return result;
     }
 }

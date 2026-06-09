@@ -50,6 +50,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.ui.components.ProductFormFields
 import com.example.xiaoyi.viewmodel.ProductViewModel
 import retrofit2.Call
@@ -66,6 +67,7 @@ val categories = listOf(
     Category(5, "其他")
 )
 
+//发布页面
 @Composable
 fun SellScreen(
     navController: NavController,
@@ -88,6 +90,7 @@ fun SellScreen(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(16.dp)
         )
+        //Tab切换栏
         TabRow(
             selectedTabIndex = selectedTabIndex,
             containerColor = MaterialTheme.colorScheme.surface
@@ -103,8 +106,8 @@ fun SellScreen(
                                 FontWeight.Bold else FontWeight.Normal
                         )
                     },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    selectedContentColor = MaterialTheme.colorScheme.primary,//选中颜色
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant//未选择颜色
                 )
             }
         }
@@ -115,6 +118,7 @@ fun SellScreen(
     }
 }
 
+//发布商品
 @Composable
 private fun PublishProductTab(
     userId: Long,
@@ -133,16 +137,18 @@ private fun PublishProductTab(
     val publishSuccess by viewModel.publishProductSuccess.collectAsState()
 
     val pickImagesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) {
-        uris -> selectedImages = uris
+        uris -> selectedImages = uris//用户选择图片后更新状态
     }
 
     fun uploadImagesAndPublish(imageUris: List<Uri>) {
+        //先保存当前表单数据
         val currentTitle = title
         val currentPrice = price.toDouble()
         val currentDescription = description
         val currentCategoryId = selectedCategory!!.id
         val currentUserId = userId
 
+        //如果没有图片，直接发布
         if (imageUris.isEmpty()) {
             viewModel.publishProduct(
                 title = currentTitle,
@@ -155,32 +161,39 @@ private fun PublishProductTab(
             return
         }
 
-        val urls = mutableListOf<String>()
-        var uploadCount = 0
-        val timestamp = System.currentTimeMillis()
+        val urls = mutableListOf<String>()//存储上传后的图片URL
+        var uploadCount = 0//已上传数量
+        val timestamp = System.currentTimeMillis()//时间戳用于生成唯一文件名
 
         imageUris.forEachIndexed { index, uri ->
+            //将URI转换为File
             val inputStream = context.contentResolver.openInputStream(uri)
             val file = File(context.cacheDir, "temp_image_${timestamp}_${index}.png")
             inputStream?.use { input ->
                 file.outputStream().use { output ->
-                    input.copyTo(output)
+                    input.copyTo(output)//复制到临时文件
                 }
             }
 
+            //创建Multipart请求体
             val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
             val part = MultipartBody.Part.createFormData("file", file.name, requestBody)
 
-            RetrofitClient.productApi.uploadImage(part).enqueue(object : Callback<Map<String, Any>> {
-                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+            RetrofitClient.productApi.uploadImage(part).enqueue(object : Callback<Result<Map<String, Any>>> {
+                override fun onResponse(call: Call<Result<Map<String, Any>>>, response: Response<Result<Map<String, Any>>>) {
                     uploadCount++
                     if (response.isSuccessful) {
-                        val imageUrl = response.body()?.get("imageUrl") as? String
-                        if (imageUrl != null) {
-                            urls.add(imageUrl)
+                        val result = response.body()
+                        if (result != null && result.isSuccess()) {
+                            val data = result.data ?: emptyMap<String, Any>()
+                            val imageUrl = data["imageUrl"] as? String ?: data["image_url"] as? String
+                            if (imageUrl != null) {
+                                urls.add(imageUrl)//保存图片URL
+                            }
                         }
                     }
 
+                    //所有图片上传完成后发布商品
                     if (uploadCount == imageUris.size) {
                         viewModel.publishProduct(
                             title = currentTitle,
@@ -188,14 +201,15 @@ private fun PublishProductTab(
                             description = currentDescription,
                             categoryId = currentCategoryId,
                             sellerId = currentUserId,
-                            images = urls.joinToString(",")
+                            images = urls.joinToString(",")//用逗号分隔多个URL
                         )
                     }
                 }
 
-                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
                     uploadCount++
                     Log.e("SellScreen", "图片上传失败: ${t.message}")
+                    //部分图片上传失败，尝试发布
                     if (uploadCount == imageUris.size) {
                         viewModel.publishProduct(
                             title = currentTitle,
@@ -203,7 +217,7 @@ private fun PublishProductTab(
                             description = currentDescription,
                             categoryId = currentCategoryId,
                             sellerId = currentUserId,
-                            images = urls.joinToString(",")
+                            images = urls.joinToString(",")//只上传成功的图片
                         )
                     }
                 }
@@ -215,7 +229,7 @@ private fun PublishProductTab(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()),//可滚动
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ProductFormFields(
@@ -223,6 +237,7 @@ private fun PublishProductTab(
             onTitleChange = { title = it },
             price = price,
             onPriceChange = {
+                //价格输入验证
                 if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
                     price = it
                 }
@@ -243,10 +258,10 @@ private fun PublishProductTab(
             LazyRow {
                 items(selectedImages) { uri ->
                     Image(
-                        painter = rememberImagePainter(uri),
+                        painter = rememberImagePainter(uri),//Coil加载图片
                         contentDescription = "Selected image",
                         modifier = Modifier.size(80.dp).padding(8.dp),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop//Coil加载图片
                     )
                 }
             }
@@ -309,6 +324,7 @@ private fun PublishProductTab(
 
         Button(
             onClick = {
+                //表单验证
                 when {
                     title.isBlank() -> viewModel.setPublishProductError("请输入商品标题")
                     price.isBlank() -> viewModel.setPublishProductError("请输入商品价格")
@@ -348,11 +364,12 @@ private fun PublishProductTab(
         )
     }
 
+    //发布成功对话框
     if (publishSuccess) {
         AlertDialog(
             onDismissRequest = {
-                viewModel.resetPublishProductState()
-                navController.popBackStack()
+                viewModel.resetPublishProductState()//重置状态
+                navController.popBackStack()//返回上一页
             },
             title = { Text("发布成功") },
             text = { Text("您的商品已成功发布！AI质检正在进行中...") },
@@ -370,6 +387,7 @@ private fun PublishProductTab(
     }
 }
 
+//发布求购
 @Composable
 private fun PublishWantedTab(
     userId: Long,

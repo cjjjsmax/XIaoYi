@@ -7,17 +7,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.File;
 
-/**
- * Web配置类
- * 配置静态资源映射和跨域设置
- */
+//Web配置类
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    /**
-     * 配置静态资源处理器
-     * 将 /images/** 请求映射到 uploads/images/ 目录
-     */
+    //配置静态资源处理器
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String canonicalPath;
@@ -27,10 +21,10 @@ public class WebConfig implements WebMvcConfigurer {
             canonicalPath = System.getProperty("user.dir");
         }
 
-        // 与上传接口使用完全相同的路径
+        //与上传接口使用完全相同的路径
         String uploadPath = canonicalPath + "/demo/uploads/images";
         
-        // 确保目录存在
+        //确保目录存在
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
@@ -42,17 +36,5 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/images/**")
                 .addResourceLocations("file:" + uploadPath + "/")
                 .setCachePeriod(0);
-    }
-
-    /**
-     * 配置跨域设置
-     */
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .maxAge(3600);
     }
 }

@@ -65,6 +65,23 @@ fun AppNavigation(
     userId: Long,
     paddingValues: PaddingValues
 ){
+    // 需要登录的页面列表
+    val requiresLoginRoutes = listOf(
+        Screen.Sell.route,
+        Screen.Profile.route,
+        Screen.Conversations.route,
+        Screen.ProductDetail.route,
+        Screen.PurchaseRequestDetail.route,
+        Screen.MyPosts.route,
+        Screen.MyWanted.route,
+        Screen.ConversationDetail.route
+    )
+    
+    // 检查登录状态的高阶函数
+    fun requiresLogin(route: String): Boolean {
+        return requiresLoginRoutes.any { route.startsWith(it.split("{")[0]) }
+    }
+    
     NavHost(
       navController = navController,
         startDestination = startDestination
@@ -93,15 +110,23 @@ fun AppNavigation(
             )
         }
         composable (Screen.Sell.route) {
-            SellScreen(navController = navController, userId = userId, paddingValues = paddingValues)
+            if (UserManager.isLoggedIn) {
+                SellScreen(navController = navController, userId = userId, paddingValues = paddingValues)
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
         composable (Screen.Profile.route) {
-            ProfileScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues,
-                authViewModel = authViewModel
-            )
+            if (UserManager.isLoggedIn) {
+                ProfileScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues,
+                    authViewModel = authViewModel
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
         composable(
             route = Screen.ProductDetail.route,
@@ -112,28 +137,40 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getLong("productId") ?: 0L
-            ProductDetailScreen(
-                navController = navController,
-                productId = productId,
-                paddingValues = paddingValues,
-                detailType = DetailType.PRODUCT
-            )
+            if (UserManager.isLoggedIn) {
+                val productId = backStackEntry.arguments?.getLong("productId") ?: 0L
+                ProductDetailScreen(
+                    navController = navController,
+                    productId = productId,
+                    paddingValues = paddingValues,
+                    detailType = DetailType.PRODUCT
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
         composable(Screen.UserProfile.route) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")?.toLongOrNull() ?: 0L
-            ProfileScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues,
-                authViewModel = authViewModel
-            )
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getString("userId")?.toLongOrNull() ?: 0L
+                ProfileScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues,
+                    authViewModel = authViewModel
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
         composable(Screen.Conversations.route) {
-            ConversationsScreen(
-                navController = navController,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                ConversationsScreen(
+                    navController = navController,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -145,12 +182,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
-            ConversationDetailScreen(
-                navController = navController,
-                conversationId = conversationId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val conversationId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
+                ConversationDetailScreen(
+                    navController = navController,
+                    conversationId = conversationId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -162,13 +203,17 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val purchaseRequestId = backStackEntry.arguments?.getLong("purchaseRequestId") ?: 0L
-            ProductDetailScreen(
-                navController = navController,
-                productId = purchaseRequestId,
-                paddingValues = paddingValues,
-                detailType = DetailType.PURCHASE_REQUEST
-            )
+            if (UserManager.isLoggedIn) {
+                val purchaseRequestId = backStackEntry.arguments?.getLong("purchaseRequestId") ?: 0L
+                ProductDetailScreen(
+                    navController = navController,
+                    productId = purchaseRequestId,
+                    paddingValues = paddingValues,
+                    detailType = DetailType.PURCHASE_REQUEST
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -180,13 +225,15 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            MyPostsScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues
-            )
-
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                MyPostsScreen(
+                    navController = navController,
+                    userId = userId,
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -198,13 +245,15 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            MyWantedScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues
-            )
-
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                MyWantedScreen(
+                    navController = navController,
+                    userId = userId,
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -216,12 +265,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getLong("productId") ?: 0L
-            EditProductScreen(
-                navController = navController,
-                productId = productId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val productId = backStackEntry.arguments?.getLong("productId") ?: 0L
+                EditProductScreen(
+                    navController = navController,
+                    productId = productId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -233,12 +286,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val requestId = backStackEntry.arguments?.getLong("requestId") ?: 0L
-            EditWantedScreen(
-                navController = navController,
-                requestId = requestId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val requestId = backStackEntry.arguments?.getLong("requestId") ?: 0L
+                EditWantedScreen(
+                    navController = navController,
+                    requestId = requestId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -250,12 +307,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            MyOrdersScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                MyOrdersScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -267,19 +328,23 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            SettingsScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues,
-                onLogout = {
-                    UserManager.logout()
-                    onLogout()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                SettingsScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues,
+                    onLogout = {
+                        UserManager.logout()
+                        onLogout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
                     }
-                }
-            )
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -291,12 +356,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            EditProfileScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                EditProfileScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -308,12 +377,16 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            AccountSecurityScreen(
-                navController = navController,
-                userId = userId,
-                paddingValues = paddingValues
-            )
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                AccountSecurityScreen(
+                    navController = navController,
+                    userId = userId,
+                    paddingValues = paddingValues
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
         composable(
             route = Screen.AddressManagement.route,
@@ -324,11 +397,15 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            AddressManagementScreen(
-                navController = navController,
-                userId = userId
-            )
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                AddressManagementScreen(
+                    navController = navController,
+                    userId = userId
+                )
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
 
@@ -341,8 +418,12 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-            AddAddressScreen(navController = navController, userId = userId)
+            if (UserManager.isLoggedIn) {
+                val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                AddAddressScreen(navController = navController, userId = userId)
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
 
         composable(
@@ -354,8 +435,12 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            val addressId = backStackEntry.arguments?.getLong("addressId") ?: 0L
-            EditAddressScreen(navController = navController, addressId = addressId)
+            if (UserManager.isLoggedIn) {
+                val addressId = backStackEntry.arguments?.getLong("addressId") ?: 0L
+                EditAddressScreen(navController = navController, addressId = addressId)
+            } else {
+                navController.navigate(Screen.Login.route)
+            }
         }
     }
 }

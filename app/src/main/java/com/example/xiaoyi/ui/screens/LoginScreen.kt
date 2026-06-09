@@ -29,6 +29,7 @@ import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.viewmodel.AuthViewModel
 import com.example.xiaoyi.viewmodel.ViewModelFactory
 
+//用户登录页面
 @Composable
 fun LoginScreen(
     navController: NavController,
@@ -46,7 +47,9 @@ fun LoginScreen(
         println("LoginScreen: LaunchedEffect triggered, isLoggedIn=$isLoggedIn")
         if (isLoggedIn) {
             println("LoginScreen: Navigating to Home...")
+            //跳转到首页
             navController.navigate(Screen.Home.route) {
+                //清楚登录页面之前的所有页面，包括登陆页面
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
         }
@@ -78,7 +81,7 @@ fun LoginScreen(
                     localError = ""
                 },
                 label = { Text("密码") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = PasswordVisualTransformation(),//隐藏密码
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -96,7 +99,7 @@ fun LoginScreen(
                     when {
                         username.isEmpty() -> localError = "请输入用户名"
                         password.isEmpty() -> localError = "请输入密码"
-                        else -> viewModel.login(username, password)
+                        else -> viewModel.login(username, password)//调用ViewModel登录
                     }
                 },
                 enabled = username.isNotEmpty() && password.isNotEmpty(),

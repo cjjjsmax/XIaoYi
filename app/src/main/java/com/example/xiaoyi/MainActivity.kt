@@ -53,7 +53,7 @@ fun MainScreen() {
     )
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     var userId by remember { mutableStateOf(0L) }
-    val startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route
+    val startDestination = Screen.Home.route
     val currentRoute = remember {
         mutableStateOf(navController.currentBackStackEntry?.destination?.route)
     }
@@ -72,6 +72,13 @@ fun MainScreen() {
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             userId = UserManager.currentUserId
+            //如果当前在登录页面或注册页面，导航到首页
+            val currentDest = navController.currentDestination?.route
+            if (currentDest == null || currentDest == Screen.Login.route || currentDest == Screen.Register.route) {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            }
         }
     }
 
@@ -79,13 +86,12 @@ fun MainScreen() {
         modifier = Modifier
             .fillMaxSize(),
         bottomBar = {
-            val showBottomBar = isLoggedIn && 
-                currentRoute.value in listOf(
-                    Screen.Home.route,
-                    Screen.Conversations.route,
-                    Screen.Sell.route,
-                    Screen.Profile.route
-                )
+            val showBottomBar = currentRoute.value in listOf(
+                Screen.Home.route,
+                Screen.Conversations.route,
+                Screen.Sell.route,
+                Screen.Profile.route
+            )
             if (showBottomBar) {
                 BottomNavBar(navController)
             }
@@ -96,14 +102,12 @@ fun MainScreen() {
             startDestination = startDestination,
             authViewModel = authViewModel,
             onLoginSuccess = { 
-                println("MainActivity: onLoginSuccess called, setting isLoggedIn to true")
                 authViewModel.loginSuccess()
-                userId = UserManager.currentUserId  // 更新 userId
+                userId = UserManager.currentUserId
             },
             onLogout = { 
-                println("MainActivity: onLogout called, setting isLoggedIn to false")
                 authViewModel.logout()
-                userId = UserManager.currentUserId  // 更新 userId
+                userId = UserManager.currentUserId
             },
             userId = userId,
             paddingValues = it

@@ -25,22 +25,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.xiaoyi.config.ServerConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private const val BASE_URL = "http://192.168.2.4:8080"
-
-private fun getFullImageUrl(imageUrl: String?): String {
-    if (imageUrl.isNullOrEmpty()) return ""
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-        return imageUrl
-    }
-    if (imageUrl.startsWith("/")) {
-        return BASE_URL + imageUrl
-    }
-    return "$BASE_URL/$imageUrl"
-}
 
 @Composable
 fun OrderCard(
@@ -64,20 +52,20 @@ fun OrderCard(
         ) {
             // 商品图片
             AsyncImage(
-                model = getFullImageUrl(order["productImage"] as? String),
+                model = ServerConfig.getFullImageUrl(order["productImage"] as? String),
                 contentDescription = "商品图片",
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+                    .clip(RoundedCornerShape(8.dp)),//图片圆角
+                contentScale = ContentScale.Crop//裁剪填充
             )
 
             Column(
                 modifier = Modifier
                     .padding(start = 12.dp)
                     .weight(1f),
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.SpaceBetween//垂直方向均匀分布
             ) {
                 // 商品标题
                 Text(
@@ -128,7 +116,7 @@ fun OrderCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End//右对齐
         ) {
             Text(
                 text = formatTime(order["createdAt"] as? String ?: ""),
@@ -157,7 +145,9 @@ private fun getStatusColor(status: Int): Color {
 
 private fun formatTime(timeString: String): String {
     return try {
+        //输入格式
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        //输出格式
         val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val date = inputFormat.parse(timeString) ?: Date()
         outputFormat.format(date)

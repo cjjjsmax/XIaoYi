@@ -1,5 +1,6 @@
 package com.example.android.controller;
 
+import com.example.android.common.Result;
 import com.example.android.entity.Order;
 import com.example.android.entity.User;
 import com.example.android.service.OrderService;
@@ -34,50 +35,60 @@ public class OrderController {
     }
 
     @GetMapping("/buyer")
-    public List<Map<String, Object>> getOrdersByBuyer(@RequestParam("buyerId") Long buyerId) {
-        List<Order> orders = orderService.getOrdersByBuyerId(buyerId);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Order order : orders) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("id", order.getId());
-            item.put("productId", order.getProductId());
-            item.put("productTitle", order.getProductTitle());
-            item.put("productImage", order.getProductImage());
-            item.put("price", order.getPrice());
-            item.put("sellerId", order.getSellerId());
+    public Result<List<Map<String, Object>>> getOrdersByBuyer(@RequestParam("buyerId") Long buyerId) {
+        try {
+            List<Order> orders = orderService.getOrdersByBuyerId(buyerId);
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Order order : orders) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", order.getId());
+                item.put("productId", order.getProductId());
+                item.put("productTitle", order.getProductTitle());
+                item.put("productImage", order.getProductImage());
+                item.put("price", order.getPrice());
+                item.put("sellerId", order.getSellerId());
 
-            User seller = userService.getUserById(order.getSellerId());
-            item.put("sellerName", seller != null ? seller.getUsername() : "未知用户");
+                User seller = userService.getUserById(order.getSellerId());
+                item.put("sellerName", seller != null ? seller.getUsername() : "未知用户");
 
-            item.put("buyerId", order.getBuyerId());
-            item.put("status", order.getStatus());
-            item.put("createdAt", formatDate(order.getCreatedAt()));
-            result.add(item);
+                item.put("buyerId", order.getBuyerId());
+                item.put("status", order.getStatus());
+                item.put("createdAt", formatDate(order.getCreatedAt()));
+                result.add(item);
+            }
+            return Result.success("获取成功", result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取买家订单列表失败: " + e.getMessage());
         }
-        return result;
     }
 
     @GetMapping("/seller")
-    public List<Map<String, Object>> getOrdersBySeller(@RequestParam("sellerId") Long sellerId) {
-        List<Order> orders = orderService.getOrdersBySellerId(sellerId);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Order order : orders) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("id", order.getId());
-            item.put("productId", order.getProductId());
-            item.put("productTitle", order.getProductTitle());
-            item.put("productImage", order.getProductImage());
-            item.put("price", order.getPrice());
-            item.put("sellerId", order.getSellerId());
-            item.put("buyerId", order.getBuyerId());
+    public Result<List<Map<String, Object>>> getOrdersBySeller(@RequestParam("sellerId") Long sellerId) {
+        try {
+            List<Order> orders = orderService.getOrdersBySellerId(sellerId);
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Order order : orders) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", order.getId());
+                item.put("productId", order.getProductId());
+                item.put("productTitle", order.getProductTitle());
+                item.put("productImage", order.getProductImage());
+                item.put("price", order.getPrice());
+                item.put("sellerId", order.getSellerId());
+                item.put("buyerId", order.getBuyerId());
 
-            User buyer = userService.getUserById(order.getBuyerId());
-            item.put("buyerName", buyer != null ? buyer.getUsername() : "未知用户");
+                User buyer = userService.getUserById(order.getBuyerId());
+                item.put("buyerName", buyer != null ? buyer.getUsername() : "未知用户");
 
-            item.put("status", order.getStatus());
-            item.put("createdAt", formatDate(order.getCreatedAt()));
-            result.add(item);
+                item.put("status", order.getStatus());
+                item.put("createdAt", formatDate(order.getCreatedAt()));
+                result.add(item);
+            }
+            return Result.success("获取成功", result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取卖家订单列表失败: " + e.getMessage());
         }
-        return result;
     }
 }

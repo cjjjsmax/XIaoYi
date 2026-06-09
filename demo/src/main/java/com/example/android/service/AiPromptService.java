@@ -5,9 +5,6 @@ import com.example.android.entity.AiPrompt;
 import com.example.android.mapper.AiPromptMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Service
 public class AiPromptService extends ServiceImpl<AiPromptMapper, AiPrompt> {
     public String getProductInspectionPrompt(String category) {

@@ -7,6 +7,7 @@ import com.example.android.utils.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,9 @@ import java.util.Map;
 public class UserService {
     @Autowired
     private UserMapper userMapper;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
     //用户注册
     public boolean register(User user) throws Exception {
         User existingUser = userMapper.selectByUsername(user.getUsername());
@@ -49,7 +53,7 @@ public class UserService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
-        String token = JwtUtil.generateToken(claims);
+        String token = jwtUtil.generateToken(claims);
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);

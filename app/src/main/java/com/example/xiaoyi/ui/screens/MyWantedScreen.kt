@@ -34,26 +34,26 @@ import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import com.example.xiaoyi.ui.components.WantedCard
 import com.example.xiaoyi.viewmodel.ProductViewModel
 
+//我的求购
 @Composable
 fun MyWantedScreen(
     navController: NavController,
     userId: Long,
-    paddingValues: PaddingValues,
     viewModel: ProductViewModel = viewModel()
 ) {
     val userWantedList by viewModel.userWantedList.collectAsState()
     val isLoading by viewModel.isUserWantedLoading.collectAsState()
     val errorMessage by viewModel.userWantedErrorMessage.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var selectedProductId by remember { mutableStateOf<Long>(0L) }
+    var selectedWantedId by remember { mutableStateOf<Long>(0L) }
 
     LaunchedEffect(userId) {
         viewModel.loadUserPurchaseRequests(userId)
     }
 
     fun deleteWanted(requestId: Long) {
-        viewModel.deletePurchaseRequest(requestId)
-        viewModel.loadUserPurchaseRequests(userId)
+        viewModel.deletePurchaseRequest(requestId)//调用ViewModel删除
+        viewModel.loadUserPurchaseRequests(userId)//重新加载列表
     }
 
     @Composable
@@ -118,7 +118,7 @@ fun MyWantedScreen(
                             navController.navigate(Screen.EditWanted.route.replace("{requestId}", wanted.id.toString()))
                         },
                         onDelete = {
-                            selectedProductId = wanted.id
+                            selectedWantedId = wanted.id
                             showDeleteDialog = true
                         }
                     )
@@ -141,7 +141,7 @@ fun MyWantedScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        deleteWanted(selectedProductId)
+                        deleteWanted(selectedWantedId)
                         showDeleteDialog = false
                     }
                 ) {

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import retrofit2.Call
 import retrofit2.Callback
@@ -52,38 +53,25 @@ fun AddressManagementScreen(
 
     fun loadAddresses(){
         isLoading = true
-        RetrofitClient.addressApi.getAddresses(userId).enqueue(object : Callback<Map<String, Any>>{
+        RetrofitClient.addressApi.getAddresses(userId).enqueue(object : Callback<Result<List<Map<String, Any>>>>{
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 isLoading = false
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody != null) {
-                        // 尝试获取 data 字段
-                        val dataObj = responseBody["data"]
-                        if (dataObj is List<*>) {
-                            @Suppress("UNCHECKED_CAST")
-                            addressesState = dataObj as List<Map<String, Any>>
-                        } else {
-                            // 如果 data 字段不是列表，检查是否有 success 字段
-                            if (responseBody.get("success") == true) {
-                                val dataList = responseBody["data"] as? List<Map<String, Any>> ?: emptyList()
-                                addressesState = dataList
-                            } else {
-                                errorMessage = responseBody.get("message") as? String ?: "加载失败"
-                            }
-                        }
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        addressesState = result.data ?: emptyList()
                     } else {
-                        errorMessage = "网络请求失败"
+                        errorMessage = result?.message ?: "加载失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 isLoading = false
                 errorMessage = "网络错误: ${t.message}"
             }
@@ -206,17 +194,20 @@ fun AddressItem(
                 TextButton(onClick = {
                     val addressId = (address["id"] as? Number)?.toLong() ?: 0L
                     if (addressId > 0) {
-                        RetrofitClient.addressApi.deleteAddress(addressId).enqueue(object : Callback<Map<String, Any>> {
+                        RetrofitClient.addressApi.deleteAddress(addressId).enqueue(object : Callback<Result<String>> {
                             override fun onResponse(
-                                call: Call<Map<String, Any>>,
-                                response: Response<Map<String, Any>>
+                                call: Call<Result<String>>,
+                                response: Response<Result<String>>
                             ) {
                                 if (response.isSuccessful) {
-                                    onRefresh()
+                                    val result = response.body()
+                                    if (result == null || result.isSuccess()) {
+                                        onRefresh()
+                                    }
                                 }
                             }
                             override fun onFailure(
-                                call: Call<Map<String, Any>>,
+                                call: Call<Result<String>>,
                                 t: Throwable
                             ) {
 

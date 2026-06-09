@@ -1,6 +1,7 @@
 package com.example.xiaoyi.api
 
 import com.example.xiaoyi.model.Product
+import com.example.xiaoyi.model.Result
 import okhttp3.MultipartBody
 import retrofit2.Call
 import retrofit2.http.Body
@@ -40,41 +41,41 @@ interface ProductApi{
     //上传商品图片
     @Multipart
     @POST("/api/products/upload-image")
-    fun uploadImage(@Part file: MultipartBody.Part): Call<Map<String, Any>>
+    fun uploadImage(@Part file: MultipartBody.Part): Call<Result<Map<String, Any>>>
     
     //获取商品列表
     @GET("/api/products/list")
-    fun getProducts(): Call<List<Map<String, Any>>>
+    fun getProducts(): Call<Result<List<Map<String, Any>>>>
 
     //根据分类获取商品列表
     @GET("/api/products/list")
-    fun getProductsByCategory(@Query("categoryId") categoryId: Int): Call<List<Map<String, Any>>>
+    fun getProductsByCategory(@Query("categoryId") categoryId: Int): Call<Result<List<Map<String, Any>>>>
 
     //获取求购列表（支持关键词搜索和分类筛选）
     @GET("/api/purchase-requests/list")
     fun getPurchaseRequests(
         @Query("keyword") keyword: String = "",
         @Query("categoryId") categoryId: Int = 0
-    ): Call<List<Map<String, Any>>>
+    ): Call<Result<List<Map<String, Any>>>>
     
     //发布商品
     @POST("/api/products/publish/json")
-    fun publishProduct(@Body product: PublishProductRequest): Call<Map<String, Any>>
+    fun publishProduct(@Body product: PublishProductRequest): Call<Result<String>>
     
     //发布求购
     @POST("/api/purchase-requests/publish")
-    fun publishWanted(@Body purchaseRequest: PublishWantedRequest): Call<Map<String, Any>>
+    fun publishWanted(@Body purchaseRequest: PublishWantedRequest): Call<Result<String>>
     
     //获取用户发布的商品
     @GET("/api/products/user")
-    fun getUserProducts(@Query("sellerId") sellerId: Long): Call<List<Map<String, Any>>>
+    fun getUserProducts(@Query("sellerId") sellerId: Long): Call<Result<List<Map<String, Any>>>>
     
     //删除商品
     @DELETE("/api/products/delete")
-    fun deleteProduct(@Query("id") id: Long): Call<Map<String, Any>>
+    fun deleteProduct(@Query("id") id: Long): Call<Result<String>>
 
     @DELETE("/api/purchase-requests/delete")
-    fun deletePurchaseRequest(@Query("id") id: Long): Call<Map<String, Any>>
+    fun deletePurchaseRequest(@Query("id") id: Long): Call<Result<String>>
 
     @PUT("/api/purchase-requests/{id}")
     fun updatePurchaseRequest(
@@ -82,40 +83,40 @@ interface ProductApi{
         @Query("title") title: String,
         @Query("maxPrice") maxPrice: Double,
         @Query("description") description: String
-    ): Call<Map<String, Any>>
+    ): Call<Result<String>>
 
     @GET("/api/orders/buyer")
-    fun getOrdersByBuyer(@Query("buyerId") buyerId: Long): Call<List<Map<String, Any>>>
+    fun getOrdersByBuyer(@Query("buyerId") buyerId: Long): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/orders/seller")
-    fun getOrdersBySeller(@Query("sellerId") sellerId: Long): Call<List<Map<String, Any>>>
+    fun getOrdersBySeller(@Query("sellerId") sellerId: Long): Call<Result<List<Map<String, Any>>>>
     
     //获取商品详情
     @GET("/api/products/detail")
-    fun getProductById(@Query("id") id: Long): Call<Map<String, Any>>
+    fun getProductById(@Query("id") id: Long): Call<Result<Map<String, Any>>>
     
     //获取求购详情
     @GET("/api/purchase-requests/detail")
-    fun getPurchaseRequestById(@Query("id") id: Long): Call<Map<String, Any>>
+    fun getPurchaseRequestById(@Query("id") id: Long): Call<Result<Map<String, Any>>>
     
     //更新商品
     @PUT("/api/products/{productId}")
-    fun updateProduct(@Path("productId") productId: Long, @Body request: PublishProductRequest): Call<Map<String, Any>>
+    fun updateProduct(@Path("productId") productId: Long, @Body request: PublishProductRequest): Call<Result<String>>
     
     //获取用户求购
     @GET("/api/purchase-requests/user")
-    fun getUserPurchaseRequests(@Query("buyerId") buyerId: Long): Call<List<Map<String, Any>>>
+    fun getUserPurchaseRequests(@Query("buyerId") buyerId: Long): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/products/list")
-    fun getProducts(@Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+    fun getProducts(@Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/products/list")
-    fun getProductsByCategory(@Query("categoryId") categoryId: Int, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+    fun getProductsByCategory(@Query("categoryId") categoryId: Int, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/products/search")
-    fun searchProducts(@Query("keyword") keyword: String, @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+    fun searchProducts(@Query("keyword") keyword: String, @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<Result<List<Map<String, Any>>>>
 
     @GET("/api/purchase-requests/list")
-    fun getPurchaseRequests(@Query("keyword") keyword: String = "", @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<List<Map<String, Any>>>
+    fun getPurchaseRequests(@Query("keyword") keyword: String = "", @Query("categoryId") categoryId: Int = 0, @Query("page") page: Int = 1, @Query("size") size: Int = 20): Call<Result<List<Map<String, Any>>>>
 
 }

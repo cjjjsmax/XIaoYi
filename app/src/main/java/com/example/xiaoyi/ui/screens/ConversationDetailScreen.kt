@@ -59,6 +59,7 @@ import androidx.navigation.NavController
 import com.example.xiaoyi.R
 import com.example.xiaoyi.api.RetrofitClient
 import com.example.xiaoyi.model.Message
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.model.SendMessageRequest
 import com.example.xiaoyi.utils.TimeUtils
 import com.example.xiaoyi.utils.UserManager
@@ -123,15 +124,15 @@ fun ConversationDetailScreen(
     fun markMessagesAsRead() {
         val currentUserId = UserManager.currentUserId
         val call = RetrofitClient.messageApi.markAsRead(conversationId, currentUserId)
-        call.enqueue(object : Callback<Map<String, Any>> {
+        call.enqueue(object : Callback<Result<String>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<String>>,
+                response: Response<Result<String>>
             ) {
 
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<String>>, t: Throwable) {
 
             }
         })
@@ -142,16 +143,15 @@ fun ConversationDetailScreen(
         errorMessage = null
 
         val call = RetrofitClient.messageApi.getConversationMessages(conversationId)
-        call.enqueue(object : Callback<Map<String, Any>> {
+        call.enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody?.get("success") == true) {
-                        val messageData = responseBody["data"] as? List<Map<String, Any>>
-                        val messageList = messageData?.map {
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val messageList = (result.data ?: emptyList()).map {
                             Message(
                                 id = (it["id"] as? Number)?.toLong() ?: 0L,
                                 conversationId = (it["conversationId"] as? Number)?.toLong() ?: 0L,
@@ -163,11 +163,11 @@ fun ConversationDetailScreen(
                                 isRead = (it["isRead"] as? Number)?.toInt() == 1,
                                 createdAt = it["createdAt"] as? String ?: ""
                             )
-                        } ?: emptyList()
+                        }
                         messages = messageList
                         markMessagesAsRead()
                     } else {
-                        errorMessage = responseBody?.get("message") as? String ?: "加载失败"
+                        errorMessage = result?.message ?: "加载失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
@@ -176,7 +176,7 @@ fun ConversationDetailScreen(
             }
 
             override fun onFailure(
-                call: Call<Map<String, Any>>,
+                call: Call<Result<List<Map<String, Any>>>>,
                 t: Throwable
             ) {
                 errorMessage = "网络错误: ${t.message}"
@@ -197,10 +197,10 @@ fun ConversationDetailScreen(
             type = "text"
         )
         val call = RetrofitClient.messageApi.sendMessage(request)
-        call.enqueue(object : Callback<Map<String, Any>> {
+        call.enqueue(object : Callback<Result<String>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Result<String>>,
+                response: Response<Result<String>>
             ) {
                 if (response.isSuccessful) {
                     messageText = ""
@@ -208,7 +208,7 @@ fun ConversationDetailScreen(
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<String>>, t: Throwable) {
 
             }
         })

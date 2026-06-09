@@ -26,7 +26,7 @@ public class UserAddressService extends ServiceImpl<UserAddressMapper, UserAddre
     }
 
     public boolean updateAddress(UserAddress address) {
-        // 先获取原始地址，确保 userId 正确
+        //先获取原始地址，确保 userId 正确
         UserAddress existingAddress = getById(address.getId());
         if (existingAddress != null && existingAddress.getUserId() != null) {
             address.setUserId(existingAddress.getUserId());

@@ -11,49 +11,37 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 
-/**
- * 图片同步工具类
- * 用于同步数据库中记录的图片文件到指定目录
- */
+
+//图片同步工具类
 @Component
 public class ImageSyncTool {
 
     @Autowired
     private ProductService productService;
 
-    /**
-     * 目标目录（图片最终存储位置）
-     */
+    //目标目录,图片最终存储位置
     private static final String TARGET_DIR = "uploads/images/";
 
-    /**
-     * 可能的源目录列表（需要根据实际情况配置）
-     */
+
     private static final String[] POSSIBLE_SOURCE_DIRS = {
-            "src/main/resources/static/images/",  // 资源目录
+            "src/main/resources/static/images/",//资源目录
             "images/",                            // 根目录下的images
-            "backup/images/",                     // 备份目录
-            "product_images/",                    // 产品图片目录
-            "../images/",                         // 上级目录
-            "D:/images/",                         // Windows常见路径
-            "E:/product_images/"                  // Windows常见路径
+            "../images/"                         // 上级目录
     };
 
-    /**
-     * 应用启动时自动执行同步
-     */
-    @PostConstruct
+
+    @PostConstruct//应用启动后自动执行
     public void syncImagesOnStartup() {
         System.out.println("========== 开始同步商品图片 ==========");
         
-        // 确保目标目录存在
+        //确保目标目录存在
         File target = new File(TARGET_DIR);
         if (!target.exists()) {
             target.mkdirs();
             System.out.println("创建目标目录: " + TARGET_DIR);
         }
 
-        // 获取数据库中所有商品的图片路径
+        //获取数据库中所有商品的图片路径
         List<Product> products = productService.list();
         
         int found = 0;
@@ -66,20 +54,20 @@ public class ImageSyncTool {
                 continue;
             }
 
-            // 提取文件名（去掉 /images/ 前缀）
+            //提取文件名
             String fileName = imagePath;
             if (fileName.startsWith("/images/")) {
                 fileName = fileName.substring(8);
             }
 
-            // 检查目标目录是否已存在
+            //检查目标目录是否已存在
             File targetFile = new File(TARGET_DIR + fileName);
             if (targetFile.exists()) {
                 found++;
                 continue;
             }
 
-            // 尝试从各个可能的源目录复制
+            //尝试从各个可能的源目录复制
             boolean copiedSuccess = false;
             for (String sourceDir : POSSIBLE_SOURCE_DIRS) {
                 File sourceFile = new File(sourceDir + fileName);

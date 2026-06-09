@@ -1,13 +1,12 @@
 package com.example.android.controller;
 
+import com.example.android.common.Result;
 import com.example.android.entity.Message;
 import com.example.android.service.MessageService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -16,58 +15,46 @@ public class MessageController {
     private MessageService messageService;
 
     @GetMapping("/list")
-    public Map<String, Object> getMessages(@RequestParam Long userId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<List<Message>> getMessages(@RequestParam Long userId) {
         try {
             List<Message> messages = messageService.getMessagesByUserId(userId);
-            result.put("success", true);
-            result.put("data", messages);
+            return Result.success("获取成功", messages);
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取消息列表失败: " + e.getMessage());
         }
-        return result;
     }
 
     @GetMapping("/conversation/{conversationId}")
-    public Map<String, Object> getConversationMessages(@PathVariable Long conversationId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<List<Message>> getConversationMessages(@PathVariable Long conversationId) {
         try {
             List<Message> messages = messageService.getMessagesByConversationId(conversationId);
-            result.put("success", true);
-            result.put("data", messages);
+            return Result.success("获取成功", messages);
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取会话消息失败: " + e.getMessage());
         }
-        return result;
     }
 
     @PostMapping("/send")
-    public Map<String, Object> sendMessage(@RequestBody Message message) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<String> sendMessage(@RequestBody Message message) {
         try {
             boolean success = messageService.sendMessage(message);
-            result.put("success", success);
-            result.put("message", success ? "发送成功" : "发送失败");
+            return success ? Result.success("发送成功") : Result.error("发送失败");
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("发送消息失败: " + e.getMessage());
         }
-        return result;
     }
 
     @PutMapping("/read/conversation/{conversationId}")
-    public Map<String, Object> markConversationAsRead(@PathVariable Long conversationId, @RequestParam Long userId) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<String> markConversationAsRead(@PathVariable Long conversationId, @RequestParam Long userId) {
         try {
             boolean success = messageService.markConversationAsRead(conversationId, userId);
-            result.put("success", success);
-            result.put("message", success ? "标记成功" : "标记失败");
+            return success ? Result.success("标记成功") : Result.error("标记失败");
         } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", e.getMessage());
+            e.printStackTrace();
+            return Result.error("标记消息已读失败: " + e.getMessage());
         }
-        return result;
     }
 }

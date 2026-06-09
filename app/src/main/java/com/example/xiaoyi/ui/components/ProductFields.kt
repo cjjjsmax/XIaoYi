@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+//发布商品/编辑商品
 @Composable
 fun ProductFormFields(
     title: String,
@@ -31,9 +32,9 @@ fun ProductFormFields(
         onValueChange = onTitleChange,
         label = { Text("$titleLabel*") },
         placeholder = { Text("请输入$titleLabel") },
-        singleLine = true,
+        singleLine = true,//单行输入
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)//普通文字键盘
     )
 
     Spacer(modifier = Modifier.height(16.dp))

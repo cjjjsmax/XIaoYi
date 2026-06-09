@@ -25,6 +25,7 @@ public class ConversationService {
     @Resource
     private UserMapper userMapper;
 
+    //获取用户的会话列表
     public List<Map<String, Object>> getConversationsWithLatestMessage(Long userId){
         List<Conversation> conversations = conversationMapper.getConversationsByUserId(userId);
         List<Map<String, Object>> resultList = new ArrayList<>();
@@ -71,18 +72,7 @@ public class ConversationService {
         return resultList;
     }
 
-    public Conversation getConversationById(Long id) {
-        return conversationMapper.selectById(id);
-    }
-
-    public boolean createConversation(Conversation conversation) {
-        return conversationMapper.insert(conversation) > 0;
-    }
-
-    public boolean updateConversation(Conversation conversation) {
-        return conversationMapper.updateById(conversation) > 0;
-    }
-
+    //创建会话
     public Long createConversation(Long initiatorId, Long receiverId, Long productId, String type) {
         Conversation conversation = new Conversation();
         conversation.setInitiatorId(initiatorId);
@@ -94,6 +84,7 @@ public class ConversationService {
         return conversation.getId();
     }
 
+    //获取会话详情
     public Map<String, Object> getConversationDetail(Long conversationId) {
         Conversation conversation = conversationMapper.selectById(conversationId);
         if (conversation == null) {
@@ -122,6 +113,7 @@ public class ConversationService {
         return result;
     }
 
+    //关闭会话
     public boolean closeConversation(Long conversationId) {
         Conversation conversation = conversationMapper.selectById(conversationId);
         if (conversation == null) {
@@ -131,6 +123,7 @@ public class ConversationService {
         return conversationMapper.updateById(conversation) > 0;
     }
 
+    //查询两个用户之间会话
     public Conversation findConversation(Long userId1, Long userId2) {
         return conversationMapper.findByUsers(userId1, userId2);
     }

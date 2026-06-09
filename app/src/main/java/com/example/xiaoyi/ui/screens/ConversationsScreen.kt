@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
 import com.example.xiaoyi.model.Conversation
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.utils.TimeUtils
 import com.example.xiaoyi.utils.UserManager
@@ -49,13 +50,12 @@ fun ConversationsScreen(
 
         val currentUserId = UserManager.currentUserId
         val call = RetrofitClient.conversationApi.getConversations(currentUserId)
-        call.enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+        call.enqueue(object : Callback<Result<List<Map<String, Any>>>> {
+            override fun onResponse(call: Call<Result<List<Map<String, Any>>>>, response: Response<Result<List<Map<String, Any>>>>) {
                 if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    if (responseBody?.get("success") == true) {
-                        val data = responseBody["data"] as? List<Map<String, Any>>
-                        val conversationList = data?.map {
+                    val result = response.body()
+                    if (result != null && result.isSuccess()) {
+                        val conversationList = (result.data ?: emptyList()).map {
                             Conversation(
                                 id = (it["id"] as? Number)?.toLong() ?: 0L,
                                 initiatorId = (it["initiatorId"] as? Number)?.toLong() ?: 0L,
@@ -70,10 +70,10 @@ fun ConversationsScreen(
                                 otherUserAvatar = it["otherUserAvatar"] as? String ?: "",
                                 unreadCount = (it["unreadCount"] as? Number)?.toInt() ?: 0
                             )
-                        } ?: emptyList()
+                        }
                         conversations = conversationList
                     } else {
-                        errorMessage = responseBody?.get("message") as? String ?: "加载失败"
+                        errorMessage = result?.message ?: "加载失败"
                     }
                 } else {
                     errorMessage = "网络错误: ${response.code()}"
@@ -81,7 +81,7 @@ fun ConversationsScreen(
                 isLoading = false
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 errorMessage = "网络错误: ${t.message}"
                 isLoading = false
             }

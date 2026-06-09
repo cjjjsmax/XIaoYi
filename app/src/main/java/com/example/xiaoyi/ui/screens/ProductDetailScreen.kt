@@ -46,7 +46,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.xiaoyi.R
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.config.ServerConfig
 import com.example.xiaoyi.model.CreateConversationRequest
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.navigation.Screen
 import com.example.xiaoyi.utils.TimeUtils
 import com.example.xiaoyi.utils.UserManager
@@ -204,23 +206,15 @@ fun ProductDetailScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 商品内容区域（可滚动）
+                    //商品内容区域
                     androidx.compose.foundation.lazy.LazyColumn(
                         modifier = Modifier.weight(1f)
                     ) {
                         if (!isPurchaseRequest) {
                             item {
-                                // 获取商品图片URL并转换为完整URL
+                                //获取商品图片URL并转换为完整URL
                                 val imageUrl = productData["images"] as? String ?: ""
-                                val fullImageUrl = if (imageUrl.isEmpty()) {
-                                    ""
-                                } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-                                    imageUrl
-                                } else if (imageUrl.startsWith("/")) {
-                                    "http://192.168.2.4:8080$imageUrl"
-                                } else {
-                                    "http://192.168.2.4:8080/$imageUrl"
-                                }
+                                val fullImageUrl = ServerConfig.getFullImageUrl(imageUrl)
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -379,7 +373,7 @@ fun ProductDetailScreen(
                         }
                     }
 
-                    // 底部按钮区域（固定在底部）
+                    //底部按钮区域
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         modifier = Modifier
@@ -424,23 +418,21 @@ fun ProductDetailScreen(
                                     currentUserId,
                                     sellerId
                                 )
-                                call.enqueue(object : Callback<Map<String, Any>> {
+                                call.enqueue(object : Callback<Result<Map<String, Any>>> {
                                     override fun onResponse(
-                                        call: Call<Map<String, Any>>,
-                                        response: Response<Map<String, Any>>
+                                        call: Call<Result<Map<String, Any>>>,
+                                        response: Response<Result<Map<String, Any>>>
                                     ) {
                                         println("findConversation onResponse: ${response.code()}, body: ${response.body()}")
                                         if (response.isSuccessful) {
-                                            val body = response.body()
+                                            val result = response.body()
                                             println(
-                                                "findConversation success: ${body?.get("success")}, data: ${
-                                                    body?.get(
-                                                        "data"
-                                                    )
+                                                "findConversation success: ${result?.isSuccess()}, data: ${
+                                                    result?.data
                                                 }"
                                             )
                                             val conversation =
-                                                body?.get("data") as? Map<String, Any>
+                                                result?.data
 
                                             if (conversation != null) {
                                                 val conversationId =
@@ -467,25 +459,19 @@ fun ProductDetailScreen(
                                                         request
                                                     )
                                                 createCall.enqueue(object :
-                                                    Callback<Map<String, Any>> {
+                                                    Callback<Result<Long>> {
                                                     override fun onResponse(
-                                                        call: Call<Map<String, Any>>,
-                                                        response: Response<Map<String, Any>>
+                                                        call: Call<Result<Long>>,
+                                                        response: Response<Result<Long>>
                                                     ) {
                                                         println("createConversation onResponse: ${response.code()}, body: ${response.body()}")
                                                         if (response.isSuccessful) {
-                                                            val body = response.body()
+                                                            val result = response.body()
                                                             println(
-                                                                "createConversation success: ${
-                                                                    body?.get(
-                                                                        "success"
-                                                                    )
-                                                                }, data: ${body?.get("data")}"
+                                                                "createConversation success: ${result?.isSuccess()}, data: ${result?.data}"
                                                             )
-                                                            if (body?.get("success") == true) {
-                                                                val newId =
-                                                                    (body["data"] as? Number)?.toLong()
-                                                                        ?: 0L
+                                                            if (result != null && result.isSuccess()) {
+                                                                val newId = result.data ?: 0L
                                                                 println("new conversationId: $newId")
                                                                 val sellerName =
                                                                     productData["username"] as? String
@@ -506,7 +492,7 @@ fun ProductDetailScreen(
                                                     }
 
                                                     override fun onFailure(
-                                                        call: Call<Map<String, Any>>,
+                                                        call: Call<Result<Long>>,
                                                         t: Throwable
                                                     ) {
                                                         println("createConversation onFailure: ${t.message}")
@@ -518,7 +504,7 @@ fun ProductDetailScreen(
                                     }
 
                                     override fun onFailure(
-                                        call: Call<Map<String, Any>>,
+                                        call: Call<Result<Map<String, Any>>>,
                                         t: Throwable
                                     ) {
                                         println("findConversation onFailure: ${t.message}")
@@ -579,40 +565,29 @@ private fun loadProductDetail(
     callback: (Map<String, Any>?, Map<String, Any>?, List<Map<String, Any>>?, String?) -> Unit
 ) {
     val call = RetrofitClient.productApi.getProductById(productId)
-    call.enqueue(object : Callback<Map<String, Any>> {
+    call.enqueue(object : Callback<Result<Map<String, Any>>> {
         override fun onResponse(
-            call: Call<Map<String, Any>>,
-            response: Response<Map<String, Any>>
+            call: Call<Result<Map<String, Any>>>,
+            response: Response<Result<Map<String, Any>>>
         ) {
             if (response.isSuccessful) {
-                val responseBody = response.body()
-                println("Response body: $responseBody")
-                if (responseBody != null) {
-                    val code = responseBody["code"]
-                    println("Response code: $code, type: ${code?.javaClass}")
-                    val codeValue = when (code) {
-                        is Int -> code
-                        is Double -> code.toInt()
-                        else -> null
-                    }
-                    if (codeValue == 200) {
-                        val data = responseBody["data"] as? Map<String, Any>
-                        println("Response data: $data")
-                        val product = data?.get("product") as? Map<String, Any>
-                        val seller = data?.get("seller") as? Map<String, Any>
-                        val flaws = data?.get("flaws") as? List<Map<String, Any>>
-                        println("Response product: $product, seller: $seller, flaws: $flaws")
-                        if (product != null) {
-                            callback(product, seller, flaws, null)
-                        } else {
-                            callback(null, null, null, "商品数据为空")
-                        }
+                val result = response.body()
+                println("Response body: $result")
+                if (result != null && result.isSuccess()) {
+                    val data = result.data ?: emptyMap<String, Any>()
+                    println("Response data: $data")
+                    val product = data["product"] as? Map<String, Any>
+                    val seller = data["seller"] as? Map<String, Any>
+                    val flaws = data["flaws"] as? List<Map<String, Any>>
+                    println("Response product: $product, seller: $seller, flaws: $flaws")
+                    if (product != null) {
+                        callback(product, seller, flaws, null)
                     } else {
-                        val message = responseBody["message"] as? String ?: "加载失败"
-                        callback(null, null, null, message)
+                        callback(null, null, null, "商品数据为空")
                     }
                 } else {
-                    callback(null, null, null, "加载失败: 响应为空")
+                    val message = result?.message ?: "加载失败"
+                    callback(null, null, null, message)
                 }
             } else {
                 callback(null, null, null, "加载失败: ${response.code()}")
@@ -620,7 +595,7 @@ private fun loadProductDetail(
         }
 
         override fun onFailure(
-            call: Call<Map<String, Any>>, t: Throwable
+            call: Call<Result<Map<String, Any>>>, t: Throwable
         ) {
             callback(null, null, null, "网络错误: ${t.message}")
         }
@@ -643,36 +618,25 @@ private fun loadPurchaseRequestDetail(
     callback: (Map<String, Any>?, String?) -> Unit
 ) {
     val call = RetrofitClient.productApi.getPurchaseRequestById(purchaseRequestId)
-    call.enqueue(object : Callback<Map<String, Any>> {
+    call.enqueue(object : Callback<Result<Map<String, Any>>> {
         override fun onResponse(
-            call: Call<Map<String, Any>>,
-            response: Response<Map<String, Any>>
+            call: Call<Result<Map<String, Any>>>,
+            response: Response<Result<Map<String, Any>>>
         ) {
             if (response.isSuccessful) {
-                val responseBody = response.body()
-                println("Response body: $responseBody")
-                if (responseBody != null) {
-                    val code = responseBody["code"]
-                    println("Response code: $code, type: ${code?.javaClass}")
-                    val codeValue = when (code) {
-                        is Int -> code
-                        is Double -> code.toInt()
-                        else -> null
-                    }
-                    if (codeValue == 200) {
-                        val data = responseBody["data"] as? Map<String, Any>
-                        println("Response data: $data")
-                        if (data != null) {
-                            callback(data, null)
-                        } else {
-                            callback(null, "求购数据为空")
-                        }
+                val result = response.body()
+                println("Response body: $result")
+                if (result != null && result.isSuccess()) {
+                    val data = result.data ?: emptyMap<String, Any>()
+                    println("Response data: $data")
+                    if (data.isNotEmpty()) {
+                        callback(data, null)
                     } else {
-                        val message = responseBody["message"] as? String ?: "加载失败"
-                        callback(null, message)
+                        callback(null, "求购数据为空")
                     }
                 } else {
-                    callback(null, "加载失败: 响应为空")
+                    val message = result?.message ?: "加载失败"
+                    callback(null, message)
                 }
             } else {
                 callback(null, "加载失败: ${response.code()}")
@@ -680,7 +644,7 @@ private fun loadPurchaseRequestDetail(
         }
 
         override fun onFailure(
-            call: Call<Map<String, Any>>, t: Throwable
+            call: Call<Result<Map<String, Any>>>, t: Throwable
         ) {
             callback(null, "网络错误: ${t.message}")
         }

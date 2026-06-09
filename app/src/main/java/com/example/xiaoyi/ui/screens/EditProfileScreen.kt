@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.model.User
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import retrofit2.Call
@@ -164,11 +165,11 @@ private fun loadUserInfo(
     onSuccess: (User) -> Unit
 ) {
     val call = RetrofitClient.userApi.getUserById(userId)
-    call.enqueue(object : Callback<Map<String, Any>> {
-        override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+    call.enqueue(object : Callback<Result<Map<String, Any>>> {
+        override fun onResponse(call: Call<Result<Map<String, Any>>>, response: Response<Result<Map<String, Any>>>) {
             if (response.isSuccessful) {
-                val userData = response.body()
-                val data = userData?.get("data") as? Map<*, *> ?: emptyMap<Any, Any>()
+                val result = response.body()
+                val data = result?.data ?: emptyMap<String, Any>()
 
                 val user = User(
                     id = (data["id"] as? Number)?.toLong() ?: 0L,
@@ -184,7 +185,7 @@ private fun loadUserInfo(
             }
         }
 
-        override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) { }
+        override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) { }
     })
 }
 
@@ -202,15 +203,14 @@ private fun updateUserProfile(
         studentId = studentId,
         school = school
     )
-    call.enqueue(object : Callback<Map<String, Any>> {
-        override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+    call.enqueue(object : Callback<Result<Map<String, Any>>> {
+        override fun onResponse(call: Call<Result<Map<String, Any>>>, response: Response<Result<Map<String, Any>>>) {
             if (response.isSuccessful) {
-                val body = response.body()
-                val code = (body?.get("code") as? Number)?.toInt() ?: 0
-                if (code == 200) {
+                val result = response.body()
+                if (result != null && result.isSuccess()) {
                     onSuccess()
                 } else {
-                    val message = body?.get("message") as? String ?: "更新失败"
+                    val message = result?.message ?: "更新失败"
                     onError(message)
                 }
             } else {
@@ -218,7 +218,7 @@ private fun updateUserProfile(
             }
         }
 
-        override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+        override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
             onError("网络错误: ${t.message}")
         }
     })

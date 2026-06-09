@@ -25,19 +25,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.xiaoyi.R
-
-private const val BASE_URL = "http://192.168.2.4:8080"
-
-private fun getFullImageUrl(imageUrl: String): String {
-    if (imageUrl.isEmpty()) return ""
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-        return imageUrl
-    }
-    if (imageUrl.startsWith("/")) {
-        return BASE_URL + imageUrl
-    }
-    return "$BASE_URL/$imageUrl"
-}
+import com.example.xiaoyi.config.ServerConfig
 
 @Composable
 fun ProductCard(
@@ -62,14 +50,14 @@ fun ProductCard(
                 .padding(12.dp)
         ){
             AsyncImage(
-                model = getFullImageUrl(imageUrl),
-                contentDescription = productName,
+                model = ServerConfig.getFullImageUrl(imageUrl),
+                contentDescription = productName,//无障碍描述
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp),
-                contentScale = ContentScale.Crop,
-                error = painterResource(R.drawable.ic_launcher_foreground),
-                placeholder = painterResource(R.drawable.ic_launcher_foreground)
+                contentScale = ContentScale.Crop,//裁剪填充
+                error = painterResource(R.drawable.ic_launcher_foreground),//错误占位图
+                placeholder = painterResource(R.drawable.ic_launcher_foreground)//加载占位图
             )
 
             Column(

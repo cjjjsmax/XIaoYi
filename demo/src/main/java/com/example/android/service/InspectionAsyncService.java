@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -29,22 +28,19 @@ public class InspectionAsyncService {
     @Autowired
     private AiPromptService aiPromptService;
 
-    @Value("${zhipu.ai.model:GLM-5V-Turbo}")
-    private String model;
-
     @Async("taskExecutor")
     public void InspectionAsync(Long productId) {
         log.info("========== 开始异步质检 ==========");
         log.info("商品ID: {}", productId);
 
         try {
-            // 1. 获取商品信息
+            //获取商品信息
             Product product = productService.getById(productId);
             if (product == null) {
                 log.error("商品不存在，ID: {}", productId);
                 return;
             }
-             // 2. 获取图片Base64列表
+             //获取图片Base64列表
             List<String> imageBase64List = new ArrayList<>();
             String[] imagePaths = product.getImages().split(",");
             for (String imagePath : imagePaths) {
@@ -60,28 +56,28 @@ public class InspectionAsyncService {
                 return;
             }
 
-            // 3. 获取提示词（使用你代码中的方法）
+            //获取提示词
             String bizType = aiPromptService.getBizTypeByCategoryId(product.getCategoryId());
             String prompt = aiPromptService.getProductInspectionPrompt(bizType);
             log.info("提示词长度: {}", prompt != null ? prompt.length() : 0);
 
-            // 4. 调用AI服务
+            //调用AI服务
             log.info("开始调用AI服务...");
             String aiResponse = zhipuAIService.generateProductReportWithBase64(prompt, imageBase64List);
 
-            // 5. 解析AI响应
+            //解析AI响应
             Map<String, Object> inspectionResult = zhipuAIService.parseInspectionReport(aiResponse);
             String overallCondition = (String) inspectionResult.get("overall_condition");
             @SuppressWarnings("unchecked")
             List<Map<String, String>> flaws = (List<Map<String, String>>) inspectionResult.get("flaws");
 
-            // 6. 更新商品成色
+            //更新商品成色
             if (overallCondition != null) {
                 product.setOverallCondition(overallCondition);
                 productService.updateById(product);
             }
 
-            // 7. 保存瑕疵记录
+            //保存瑕疵记录
             if (flaws != null && !flaws.isEmpty()) {
                 productFlawService.deleteFlawsByProductId(productId);
                 productFlawService.saveFlaws(productId, flaws);
@@ -95,6 +91,7 @@ public class InspectionAsyncService {
         }
     }
 
+    //获取完整文件路径
     private String getFullFilePath(String imagePath) {
         if (imagePath == null || imagePath.isEmpty()) {
             return "";
@@ -108,6 +105,7 @@ public class InspectionAsyncService {
         return canonicalPath + "/demo/uploads/" + imagePath;
     }
 
+    //图片转Base64
     private String convertImageToBase64(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -118,6 +116,7 @@ public class InspectionAsyncService {
             byte[] bytes = new byte[(int) file.length()];
             fis.read(bytes);
             String extension = getFileExtension(filePath);
+            //返回Data URI格式
             return "data:image/" + extension + ";base64," + Base64.getEncoder().encodeToString(bytes);
         } catch (Exception e) {
             log.error("读取图片文件失败: {}", filePath);
@@ -125,6 +124,7 @@ public class InspectionAsyncService {
         }
     }
 
+    //获取文件扩展名
     private String getFileExtension(String filePath) {
         int dotIndex = filePath.lastIndexOf('.');
         if (dotIndex > 0 && dotIndex < filePath.length() - 1) {

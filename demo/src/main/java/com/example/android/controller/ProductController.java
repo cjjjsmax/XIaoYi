@@ -1,5 +1,6 @@
 package com.example.android.controller;
 
+import com.example.android.common.Result;
 import com.example.android.entity.Product;
 import com.example.android.entity.ProductFlaw;
 import com.example.android.entity.User;
@@ -61,8 +62,7 @@ public class ProductController {
         public void setImages(String images) { this.images = images; }
     }
     @PostMapping("/publish/json")
-    public Map<String, Object> publishProductJson(@RequestBody PublishProductRequest request, HttpServletRequest httpRequest) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<Map<String, Object>> publishProductJson(@RequestBody PublishProductRequest request) {
         try {
             Product product = new Product();
             product.setTitle(request.getTitle());
@@ -76,37 +76,26 @@ public class ProductController {
                 inspectionAsyncService.InspectionAsync(Long.valueOf(product.getId()));
                 Map<String, Object> data = new HashMap<>();
                 data.put("id", product.getId());
-                result.put("success", true);
-                result.put("message", "发布成功，AI质检正在进行中...");
-                result.put("data", data);
-            }else {
-                result.put("success", false);
-                result.put("message", "发布失败");
+                return Result.success("发布成功，AI质检正在进行中...", data);
+            } else {
+                return Result.badRequest("发布失败");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("success", false);
-            result.put("message", "发布失败: " + e.getMessage());
+            return Result.error("发布失败: " + e.getMessage());
         }
-        return result;
     }
 
     @PostMapping("/upload-image")
-    public Map<String, Object> uploadProductImage(@RequestParam("file") MultipartFile file) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public Result<Map<String, String>> uploadProductImage(@RequestParam("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {
-                result.put("success", false);
-                result.put("message", "文件为空");
-                return result;
+                return Result.badRequest("文件为空");
             }
 
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                result.put("success", false);
-                result.put("message", "请上传图片文件");
-                return result;
+                return Result.badRequest("请上传图片文件");
             }
 
             String originalFilename = file.getOriginalFilename();
@@ -133,17 +122,14 @@ public class ProductController {
             file.transferTo(dest);
 
             String imageUrl = "/images/" + fileName;
-            result.put("success", true);
-            result.put("message", "图片上传成功");
-            result.put("imageUrl", imageUrl);
+            Map<String, String> data = new HashMap<>();
+            data.put("imageUrl", imageUrl);
+            return Result.success("图片上传成功", data);
             
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("success", false);
-            result.put("message", "图片上传失败: " + e.getMessage());
+            return Result.error("图片上传失败: " + e.getMessage());
         }
-        
-        return result;
     }
 
     private String getFullImageUrl(HttpServletRequest request, String imagePath) {
@@ -180,7 +166,7 @@ public class ProductController {
     }
 
     @GetMapping("/list")
-    public List<Map<String, Object>> getProductList(
+    public Result<List<Map<String, Object>>> getProductList(
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -226,11 +212,11 @@ public class ProductController {
             }
             result.add(item);
         }
-        return result;
+        return Result.success(result);
     }
 
     @GetMapping("/search")
-    public List<Map<String, Object>> searchProducts(
+    public Result<List<Map<String, Object>>> searchProducts(
             @RequestParam String keyword,
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(defaultValue = "1") Integer page,
@@ -276,12 +262,12 @@ public class ProductController {
             }
             result.add(item);
         }
-        return result;
+        return Result.success(result);
     }
 
     //获取用户发布商品
     @GetMapping("/user")
-    public List<Map<String, Object>> getUserProducts(@RequestParam Long sellerId, HttpServletRequest request) {
+    public Result<List<Map<String, Object>>> getUserProducts(@RequestParam Long sellerId, HttpServletRequest request) {
         List<Product> products = productService.list(
                 new QueryWrapper<Product>()
                         .eq("seller_id", sellerId)
@@ -315,13 +301,12 @@ public class ProductController {
             }
             result.add(item);
         }
-        return result;
+        return Result.success(result);
     }
     //编辑商品
     @PutMapping("/{productId}")
-    public Map<String, Object> updateProduct(@PathVariable Long productId,
+    public Result<Void> updateProduct(@PathVariable Long productId,
                                              @RequestBody Map<String,Object> request) {
-        Map<String, Object> result = new HashMap<>();
         try {
             String title = (String) request.get("title");
             Double price = (Double) request.get("price");
@@ -334,42 +319,40 @@ public class ProductController {
                 product.setUpdatedAt(new Date());
                 boolean success = productService.updateById(product);
                 if (success) {
-                    result.put("code", 200);
-                    result.put("message", "编辑成功");
+                    return Result.success("编辑成功", null);
                 } else {
-                    result.put("code", 500);
-                    result.put("message", "编辑失败");
+                    return Result.error("编辑失败");
                 }
-            }else {
-                result.put("code", 404);
-                result.put("message","商品不存在");
+            } else {
+                return Result.notFound("商品不存在");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("code", 500);
-            result.put("message", "编辑失败: " + e.getMessage());
+            return Result.error("编辑失败: " + e.getMessage());
         }
-        return result;
     }
     //删除商品
     @DeleteMapping("/delete")
-    public String deleteProduct(@RequestParam Long id) {
+    public Result<Void> deleteProduct(@RequestParam Long id) {
         try {
             Product product = productService.getById(id);
             if (product == null) {
-                return "删除失败：商品不存在";
+                return Result.notFound("商品不存在");
             }
             boolean result = productService.removeById(id);
-            return result ? "删除成功" : "删除失败";
+            if (result) {
+                return Result.success("删除成功", null);
+            } else {
+                return Result.error("删除失败");
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            return "删除失败: " + e.getMessage();
+            return Result.error("删除失败: " + e.getMessage());
         }
     }
     //获取商品详细
     @GetMapping("/detail")
-    public Map<String, Object> getProductById(@RequestParam Long id, HttpServletRequest request) {
-        Map<String, Object> result = new HashMap<>();
+    public Result<Map<String, Object>> getProductById(@RequestParam Long id, HttpServletRequest request) {
         System.out.println("getProductById: 接收到的商品ID=" + id);
         try {
             Product product = productService.getById(id);
@@ -418,19 +401,14 @@ public class ProductController {
                 }
                 data.put("flaws", flawList);
 
-                result.put("code", 200);
-                result.put("message", "获取成功");
-                result.put("data", data);
                 System.out.println("最终返回的data中的flaws大小=" + ((List<?>) data.get("flaws")).size());
+                return Result.success("获取成功", data);
             } else {
-                result.put("code", 404);
-                result.put("message", "商品不存在");
+                return Result.notFound("商品不存在");
             }
         } catch (Exception e) {
-            result.put("code", 500);
-            result.put("message", e.getMessage());
+            return Result.error(e.getMessage());
         }
-        return result;
     }
     //获取图片列表
     private List<String> getImageUrls(HttpServletRequest request, String images) {

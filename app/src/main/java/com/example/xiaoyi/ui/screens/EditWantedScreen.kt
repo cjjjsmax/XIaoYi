@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import com.example.xiaoyi.ui.components.ProductFormFields
 import retrofit2.Call
@@ -152,16 +153,15 @@ private fun loadWantedData(
     onError: (String) -> Unit
 ) {
     val call = RetrofitClient.productApi.getPurchaseRequestById(requestId)
-    call.enqueue(object : Callback<Map<String, Any>> {
-        override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+    call.enqueue(object : Callback<Result<Map<String, Any>>> {
+        override fun onResponse(call: Call<Result<Map<String, Any>>>, response: Response<Result<Map<String, Any>>>) {
             if (response.isSuccessful) {
-                val data = response.body()
-                val code = (data?.get("code") as? Number)?.toInt() ?: 0
-                if (code == 200) {
-                    val product = data?.get("data") as? Map<String, Any>
+                val result = response.body()
+                if (result != null && result.isSuccess()) {
+                    val product = result.data
                     product?.let { onSuccess(it) }
                 } else {
-                    onError(data?.get("message") as? String ?: "加载失败")
+                    onError(result?.message ?: "加载失败")
                 }
             } else {
                 onError("加载失败: ${response.code()}")
@@ -169,7 +169,7 @@ private fun loadWantedData(
             onComplete()
         }
 
-        override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+        override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
             onError("网络错误: ${t.message}")
             onComplete()
         }
@@ -190,16 +190,21 @@ private fun updateWanted(
         maxPrice = maxPrice,
         description = description
     )
-    call.enqueue(object : Callback<Map<String, Any>> {
-        override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+    call.enqueue(object : Callback<Result<String>> {
+        override fun onResponse(call: Call<Result<String>>, response: Response<Result<String>>) {
             if (response.isSuccessful) {
-                onSuccess()
+                val result = response.body()
+                if (result == null || result.isSuccess()) {
+                    onSuccess()
+                } else {
+                    onError(result.message ?: "更新失败")
+                }
             } else {
                 onError("更新失败: ${response.code()}")
             }
         }
 
-        override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+        override fun onFailure(call: Call<Result<String>>, t: Throwable) {
             onError("网络错误: ${t.message}")
         }
     })

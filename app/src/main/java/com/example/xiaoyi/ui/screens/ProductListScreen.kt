@@ -69,7 +69,7 @@ private val productCategories = listOf(
 @Composable
 fun ProductListScreen(
     navController: NavController,
-    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    paddingValues: PaddingValues,
     viewModel: ProductViewModel = viewModel()
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
@@ -91,19 +91,19 @@ fun ProductListScreen(
     }
 
     fun onSearch() {
-        if (selectedTabIndex == 0) {
-            // 商品列表：按按钮搜索
-            if (searchQuery.isEmpty() && selectedCategory.id == 0) {
-                viewModel.loadProducts()
-            } else {
-                viewModel.searchProducts(searchQuery, selectedCategory.id)
+        when (selectedTabIndex) {
+            0 -> {
+                // 商品列表搜索
+                if (searchQuery.isEmpty() && selectedCategory.id == 0) {
+                    viewModel.loadProducts()
+                } else {
+                    viewModel.searchProducts(searchQuery, selectedCategory.id)
+                }
             }
-        }
-    }
-
-    fun onWantedSearch() {
-        if (selectedTabIndex == 1) {
-            viewModel.loadPurchaseRequests(wantedSearchQuery, selectedCategory.id)
+            1 -> {
+                // 求购列表搜索
+                viewModel.loadPurchaseRequests(wantedSearchQuery, selectedCategory.id)
+            }
         }
     }
 
@@ -111,6 +111,7 @@ fun ProductListScreen(
         selectedCategory = category
         expanded = false
         if (selectedTabIndex == 0) {
+            //商品列表：根据是否有搜索词选择不同加载方式
             if (searchQuery.isEmpty()) {
                 if (category.id == 0) {
                     viewModel.loadProducts()
@@ -132,7 +133,7 @@ fun ProductListScreen(
                 .padding(innerPadding)
                 .padding(paddingValues)
         ) {
-            // 商品列表：搜索框 + 分类下拉框
+            //商品列表，搜索框+分类下拉框
             if (selectedTabIndex == 0) {
                 Box {
                     TextField(
@@ -174,7 +175,7 @@ fun ProductListScreen(
                 }
             }
 
-            // 求购列表：搜索框 + 分类下拉框
+            //求购列表，搜索框+分类下拉框
             if (selectedTabIndex == 1) {
                 Box {
                     TextField(
@@ -192,7 +193,7 @@ fun ProductListScreen(
                             }
                         },
                         trailingIcon = {
-                            IconButton(onClick = { onWantedSearch() }) {
+                            IconButton(onClick = { onSearch() }) {
                                 Icon(Icons.Default.Search, contentDescription = "搜索")
                             }
                         },
@@ -238,6 +239,7 @@ fun ProductListScreen(
                             hasMoreData = viewModel.hasMoreData.collectAsState().value,
                             errorMessage = productsErrorMessage,
                             onRetry = {
+                                //重试逻辑
                                 if (searchQuery.isEmpty() && selectedCategory.id == 0) {
                                     viewModel.loadProducts(isRefresh = true)
                                 } else {
@@ -280,14 +282,14 @@ fun ProductListContent(
     val listState = rememberLazyListState()
     LaunchedEffect(listState, products, hasMoreData, isLoadingMore) {
         snapshotFlow {
-            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index//获取最后可见项索引
         }.collect { lastVisibleIndex ->
             if (lastVisibleIndex != null && lastVisibleIndex == products.size - 1 && hasMoreData && !isLoadingMore) {
                 onLoadMore()
             }
         }
     }
-    SwipeRefresh(
+    SwipeRefresh(//下拉刷新
         state = rememberSwipeRefreshState(isRefreshing = isLoading),
         onRefresh = onRetry
     ) {
@@ -362,6 +364,7 @@ fun ProductListContent(
     }
 }
 
+//求购列表内容组件待完善
 @Composable
 fun WantedListContent(
     wantedList: List<Wanted>,

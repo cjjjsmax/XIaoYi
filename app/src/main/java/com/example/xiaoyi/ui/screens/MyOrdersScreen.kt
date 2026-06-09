@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import com.example.xiaoyi.ui.components.DetailScreenTemplate
 import com.example.xiaoyi.ui.components.OrderCard
 import retrofit2.Call
@@ -38,23 +39,25 @@ fun MyOrdersScreen(
         
         // 获取用户作为买家的订单
         val buyerCall = RetrofitClient.productApi.getOrdersByBuyer(userId)
-        buyerCall.enqueue(object : Callback<List<Map<String, Any>>> {
+        buyerCall.enqueue(object : Callback<Result<List<Map<String, Any>>>> {
             override fun onResponse(
-                call: Call<List<Map<String, Any>>>,
-                response: Response<List<Map<String, Any>>>
+                call: Call<Result<List<Map<String, Any>>>>,
+                response: Response<Result<List<Map<String, Any>>>>
             ) {
                 if (response.isSuccessful) {
-                    val buyerOrders = response.body() ?: emptyList()
+                    val result = response.body()
+                    val buyerOrders = if (result != null && result.isSuccess()) result.data ?: emptyList() else emptyList()
                     
                     // 获取用户作为卖家的订单
                     val sellerCall = RetrofitClient.productApi.getOrdersBySeller(userId)
-                    sellerCall.enqueue(object : Callback<List<Map<String, Any>>> {
+                    sellerCall.enqueue(object : Callback<Result<List<Map<String, Any>>>> {
                         override fun onResponse(
-                            call: Call<List<Map<String, Any>>>,
-                            response: Response<List<Map<String, Any>>>
+                            call: Call<Result<List<Map<String, Any>>>>,
+                            response: Response<Result<List<Map<String, Any>>>>
                         ) {
                             if (response.isSuccessful) {
-                                val sellerOrders = response.body() ?: emptyList()
+                                val sellerResult = response.body()
+                                val sellerOrders = if (sellerResult != null && sellerResult.isSuccess()) sellerResult.data ?: emptyList() else emptyList()
                                 // 合并并排序订单
                                 orders = (buyerOrders + sellerOrders)
                                     .sortedByDescending { (it["createdAt"] as? String) ?: "" }
@@ -64,7 +67,7 @@ fun MyOrdersScreen(
                             isLoading = false
                         }
 
-                        override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
+                        override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                             orders = buyerOrders
                             errorMessage = "加载卖家订单失败: ${t.message}"
                             isLoading = false
@@ -76,7 +79,7 @@ fun MyOrdersScreen(
                 }
             }
 
-            override fun onFailure(call: Call<List<Map<String, Any>>>, t: Throwable) {
+            override fun onFailure(call: Call<Result<List<Map<String, Any>>>>, t: Throwable) {
                 errorMessage = "网络错误: ${t.message}"
                 isLoading = false
             }

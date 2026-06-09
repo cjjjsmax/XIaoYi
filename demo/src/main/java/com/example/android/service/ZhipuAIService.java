@@ -37,58 +37,59 @@ public class ZhipuAIService {
         this.objectMapper = new ObjectMapper();
     }
 
-    public String generateProductReport(String prompt, List<String> imageUrls) throws IOException {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
-        requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 4096);
+//    public String generateProductReport(String prompt, List<String> imageUrls) throws IOException {
+//        Map<String, Object> requestBody = new HashMap<>();
+//        requestBody.put("model", model);
+//        requestBody.put("temperature", 0.7);
+//        requestBody.put("max_tokens", 4096);
+//
+//        List<Map<String, Object>> messageContents = new ArrayList<>();
+//
+//        Map<String, Object> textContent = new HashMap<>();
+//        textContent.put("type", "text");
+//        textContent.put("text", prompt);
+//        messageContents.add(textContent);
+//
+//        if (imageUrls != null && !imageUrls.isEmpty()) {
+//            for (String imageUrl : imageUrls) {
+//                Map<String, Object> imageContent = new HashMap<>();
+//                imageContent.put("type", "image_url");
+//                Map<String, String> imageUrlObj = new HashMap<>();
+//                imageUrlObj.put("url", imageUrl);
+//                imageContent.put("image_url", imageUrlObj);
+//                messageContents.add(imageContent);
+//            }
+//        }
+//        List<Map<String, Object>> messages = List.of(Map.of(
+//                "role", "user",
+//                "content", messageContents
+//        ));
+//        requestBody.put("messages", messages);
+//
+//        RequestBody body = RequestBody.create(
+//                objectMapper.writeValueAsString(requestBody),
+//                MediaType.parse("application/json")
+//        );
+//
+//        Request request = new Request.Builder()
+//                .url(apiUrl)
+//                .header("Authorization", "Bearer " + apiKey)
+//                .header("Content-Type", "application/json")
+//                .post(body)
+//                .build();
+//
+//        try (Response response = client.newCall(request).execute()) {
+//            String responseBody = response.body() != null ? response.body().string() : "";
+//            if (!response.isSuccessful()) {
+//                System.out.println("AI请求失败，状态码: " + response.code());
+//                System.out.println("响应内容: " + responseBody);
+//                throw new IOException("AI请求失败，HTTP状态码: " + response.code() + ", 响应: " + responseBody);
+//            }
+//            return parseResponse(responseBody);
+//        }
+//    }
 
-        List<Map<String, Object>> messageContents = new ArrayList<>();
-
-        Map<String, Object> textContent = new HashMap<>();
-        textContent.put("type", "text");
-        textContent.put("text", prompt);
-        messageContents.add(textContent);
-
-        if (imageUrls != null && !imageUrls.isEmpty()) {
-            for (String imageUrl : imageUrls) {
-                Map<String, Object> imageContent = new HashMap<>();
-                imageContent.put("type", "image_url");
-                Map<String, String> imageUrlObj = new HashMap<>();
-                imageUrlObj.put("url", imageUrl);
-                imageContent.put("image_url", imageUrlObj);
-                messageContents.add(imageContent);
-            }
-        }
-        List<Map<String, Object>> messages = List.of(Map.of(
-                "role", "user",
-                "content", messageContents
-        ));
-        requestBody.put("messages", messages);
-
-        RequestBody body = RequestBody.create(
-                objectMapper.writeValueAsString(requestBody),
-                MediaType.parse("application/json")
-        );
-
-        Request request = new Request.Builder()
-                .url(apiUrl)
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
-                .post(body)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            String responseBody = response.body() != null ? response.body().string() : "";
-            if (!response.isSuccessful()) {
-                System.out.println("AI请求失败，状态码: " + response.code());
-                System.out.println("响应内容: " + responseBody);
-                throw new IOException("AI请求失败，HTTP状态码: " + response.code() + ", 响应: " + responseBody);
-            }
-            return parseResponse(responseBody);
-        }
-    }
-
+    //通过base64编码图片调用AI进行质检
     public String generateProductReportWithBase64(String prompt, List<String> imageBase64List) throws IOException {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
@@ -102,6 +103,12 @@ public class ZhipuAIService {
         textContent.put("text", prompt);
         messageContents.add(textContent);
 
+        //构建符合智谱Ai API要求的图片数据结构{
+        //  "type": "image_url",
+        //  "image_url": {
+        //    "url": "data:image/png;base64,iVBORw0KGgo..."
+        //  }
+        //}
         if (imageBase64List != null && !imageBase64List.isEmpty()) {
             for (String base64Image : imageBase64List) {
                 Map<String, Object> imageContent = new HashMap<>();
@@ -118,11 +125,13 @@ public class ZhipuAIService {
         ));
         requestBody.put("messages", messages);
 
+        //构建请求体
         RequestBody body = RequestBody.create(
                 objectMapper.writeValueAsString(requestBody),
                 MediaType.parse("application/json")
         );
 
+        //构建HTTP请求
         Request request = new Request.Builder()
                 .url(apiUrl)
                 .header("Authorization", "Bearer " + apiKey)
@@ -130,6 +139,7 @@ public class ZhipuAIService {
                 .post(body)
                 .build();
 
+        //发送请求并处理响应
         try (Response response = client.newCall(request).execute()) {
             String responseBody = response.body() != null ? response.body().string() : "";
             if (!response.isSuccessful()) {
@@ -140,6 +150,7 @@ public class ZhipuAIService {
             return parseResponse(responseBody);
         }
     }
+    //解析JSON响应
     private String parseResponse(String responseBody) throws IOException {
         JsonNode root = objectMapper.readTree(responseBody);
 
@@ -159,6 +170,7 @@ public class ZhipuAIService {
         throw new RuntimeException("无法从AI响应中提取报告内容");
     }
 
+    //解析质检报告
     public Map<String, Object> parseInspectionReport(String reportJson) throws IOException {
         Map<String, Object> result = new HashMap<>();
 
@@ -195,6 +207,7 @@ public class ZhipuAIService {
         return result;
     }
 
+    //提取JSON
     private String extractJsonFromResponse(String response) {
         int startIndex = response.indexOf("{");
         int endIndex = response.lastIndexOf("}");

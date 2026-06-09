@@ -11,19 +11,22 @@ import com.example.xiaoyi.api.AddressApi
 import com.example.xiaoyi.api.interceptor.AuthInterceptor
 import com.example.xiaoyi.api.interceptor.RetryInterceptor
 import com.example.xiaoyi.api.interceptor.TokenExpiredInterceptor
+import com.example.xiaoyi.config.ServerConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.0.2.2:8080"
-    //创建认证拦截器
+    //基础配置
+    private const val BASE_URL = ServerConfig.BASE_URL
+    //创建Context实例
     private lateinit var applicationContext: Context
+    //认证拦截器
     private val authInterceptor = AuthInterceptor()
     fun init(context: Context){
         applicationContext = context.applicationContext
     }
-    //创建lenient模式的Gso 实例
+    //创建lenient模式的Gson实例
     private val lenientGson = GsonBuilder()
         .setLenient()
         .create()
@@ -55,7 +58,7 @@ object RetrofitClient {
             .addInterceptor(loggingInterceptor)
             .build()
     }
-
+    //创建接口对象
     val productApi: ProductApi by lazy{
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)

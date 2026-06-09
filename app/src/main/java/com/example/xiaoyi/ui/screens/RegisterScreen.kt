@@ -32,7 +32,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
+import com.example.xiaoyi.model.User
 import com.example.xiaoyi.utils.ValidationUtils
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 @Composable
 fun RegisterScreen(
@@ -166,7 +172,35 @@ fun RegisterScreen(
                     }
                     else -> {
                         isLoading = true
-                        onRegisterSuccess()
+                        val user = User(
+                            username = username,
+                            passwordHash = password,
+                            studentId = studentId,
+                            phone = phone
+                        )
+                        RetrofitClient.userApi.register(user).enqueue(object : Callback<Result<Map<String, Any>>> {
+                            override fun onResponse(
+                                call: Call<Result<Map<String, Any>>>,
+                                response: Response<Result<Map<String, Any>>>
+                            ) {
+                                isLoading = false
+                                if (response.isSuccessful) {
+                                    val result = response.body()
+                                    if (result != null && result.isSuccess()) {
+                                        onRegisterSuccess()
+                                    } else {
+                                        errorMessage = result?.message ?: "注册失败"
+                                    }
+                                } else {
+                                    errorMessage = "注册失败: ${response.code()}"
+                                }
+                            }
+
+                            override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
+                                isLoading = false
+                                errorMessage = "网络错误: ${t.message}"
+                            }
+                        })
                     }
                 }
             },

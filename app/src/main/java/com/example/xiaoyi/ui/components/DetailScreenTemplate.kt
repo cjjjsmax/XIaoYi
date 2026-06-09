@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+//详情页面模板组件
 @Composable
 fun DetailScreenTemplate(
     navController: NavController,
@@ -72,7 +73,7 @@ fun DetailScreenTemplate(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator()//加载动画
                 }
             }
             errorMessage != null -> {

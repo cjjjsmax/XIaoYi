@@ -10,6 +10,7 @@ import java.util.Date;
 @Service
 public class ProductService extends ServiceImpl<ProductMapper, Product> {
 
+    //发布商品
     public boolean publishProduct(Product product,Long sellerId){
         product.setSellerId(sellerId);
         product.setStatus(1);

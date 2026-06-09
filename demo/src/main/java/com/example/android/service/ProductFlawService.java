@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 @Service
 public class ProductFlawService extends ServiceImpl<ProductFlawMapper, ProductFlaw> {
+    //查询商品瑕疵
     public List<ProductFlaw> getFlawsByProductId(Long productId) {
         System.out.println("查询缺陷列表，productId=" + productId);
         List<ProductFlaw> flaws = baseMapper.selectList(new LambdaQueryWrapper<ProductFlaw>()
@@ -23,12 +24,14 @@ public class ProductFlawService extends ServiceImpl<ProductFlawMapper, ProductFl
         return flaws;
     }
 
-    @Transactional
+    //删除商品瑕疵记录
+    @Transactional//在事务中执行
     public void deleteFlawsByProductId(Long productId) {
         baseMapper.delete(new LambdaQueryWrapper<ProductFlaw>()
                 .eq(ProductFlaw::getProductId, productId));
     }
 
+    //保存瑕疵记录
     @Transactional
     public void saveFlaws(Long productId, List<java.util.Map<String, String>> flaws) {
         if (flaws == null || flaws.isEmpty()) {

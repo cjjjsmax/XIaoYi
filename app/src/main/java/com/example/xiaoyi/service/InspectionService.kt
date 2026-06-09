@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.util.Log
 import com.example.xiaoyi.api.QualityInspectionRequest
 import com.example.xiaoyi.api.RetrofitClient
+import com.example.xiaoyi.model.Result
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -42,18 +43,17 @@ class InspectionService : Service() {
         try {
             val request = QualityInspectionRequest(productId = productId)
             RetrofitClient.qualityInspectionApi.generateProductReport(request).enqueue(object :
-                Callback<Map<String , Any>>{
+                Callback<Result<Map<String, Any>>>{
                 override fun onResponse(
-                    call: Call<Map<String, Any>?>,
-                    response: Response<Map<String, Any>?>
+                    call: Call<Result<Map<String, Any>>>,
+                    response: Response<Result<Map<String, Any>>>
                 ) {
                     if (response.isSuccessful){
-                        val data = response.body()
-                        val code = data?.get("code") as? Int ?: -1
-                        if (code == 200){
+                        val result = response.body()
+                        if (result != null && result.isSuccess()){
                             Log.d(TAG,"质检成功！ 商品ID： $productId")
                         }else{
-                            val message = data?.get("message") as? String ?: "质检失败"
+                            val message = result?.message ?: "质检失败"
                             Log.e(TAG,"质检失败: $message")
                         }
                     }else{
@@ -62,7 +62,7 @@ class InspectionService : Service() {
                     stopSelf()
                 }
 
-                override fun onFailure(call: Call<Map<String, Any>?>, t: Throwable) {
+                override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
                     Log.e(TAG,"网络错误: ${t.message}")
                     t.printStackTrace()
                     stopSelf()
