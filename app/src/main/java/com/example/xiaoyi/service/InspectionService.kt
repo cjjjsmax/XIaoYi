@@ -10,10 +10,7 @@ import com.example.xiaoyi.api.RetrofitClient
 import com.example.xiaoyi.model.Result
 import retrofit2.Call
 import retrofit2.Callback
-import retrofit2.Response
-
 class InspectionService : Service() {
-    private val TAG = "InspectionService"
     inner class LocalBinder : Binder(){
         fun getService() : InspectionService = this@InspectionService
     }
@@ -48,29 +45,14 @@ class InspectionService : Service() {
                     call: Call<Result<Map<String, Any>>>,
                     response: Response<Result<Map<String, Any>>>
                 ) {
-                    if (response.isSuccessful){
-                        val result = response.body()
-                        if (result != null && result.isSuccess()){
-                            Log.d(TAG,"质检成功！ 商品ID： $productId")
-                        }else{
-                            val message = result?.message ?: "质检失败"
-                            Log.e(TAG,"质检失败: $message")
-                        }
-                    }else{
-                        Log.e(TAG,"质检请求失败,状态码:${response.code()}")
-                    }
                     stopSelf()
                 }
 
                 override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
-                    Log.e(TAG,"网络错误: ${t.message}")
-                    t.printStackTrace()
                     stopSelf()
                 }
             })
         }catch (e : Exception){
-            Log.e(TAG,"质检失败: ${e.message}")
-            e.printStackTrace()
             stopSelf()
         }
     }

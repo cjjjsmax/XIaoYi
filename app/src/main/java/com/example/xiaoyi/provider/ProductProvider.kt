@@ -6,13 +6,11 @@ import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import android.util.Log
 import com.example.xiaoyi.data.database.AppDatabase
 import com.example.xiaoyi.data.database.entity.ProductEntity
 
 class ProductProvider : ContentProvider() {
 
-    private val TAG = "ProductProvider"
     private val AUTHORITY = "com.example.xiaoyi.provider.products"
     private val PRODUCTS = 1
     private val PRODUCT_ID = 2
@@ -28,7 +26,6 @@ class ProductProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String?>?
     ): Int {
-        Log.d(TAG, "删除数据，URI: $uri")
         return when (uriMatcher.match(uri)) {
             PRODUCT_ID -> {
                 val productId = uri.lastPathSegment?.toLong() ?: return 0
@@ -51,8 +48,6 @@ class ProductProvider : ContentProvider() {
         uri: Uri,
         values: ContentValues?
     ): Uri? {
-        Log.d(TAG, "插入数据，URI: $uri")
-
         if (uriMatcher.match(uri) == PRODUCTS) {
             val product = ProductEntity(
                 name = values?.getAsString("name") ?: "",
@@ -70,7 +65,6 @@ class ProductProvider : ContentProvider() {
     }
 
     override fun onCreate(): Boolean {
-        Log.d(TAG, "ContentProvider创建")
         context?.let {
             database = AppDatabase.getInstance(it)
         }
@@ -84,17 +78,14 @@ class ProductProvider : ContentProvider() {
         selectionArgs: Array<out String?>?,
         sortOrder: String?
     ): Cursor? {
-        Log.d(TAG,"查询数据.URI： $uri")
         val productDao = database.productDao()
         return when(uriMatcher.match(uri)) {
             PRODUCTS -> {
-                Log.d(TAG, "查询所有商品")
                 val products = productDao.getAllProducts()
                 createCursor(products)
             }
             PRODUCT_ID -> {
                 val productId = uri.lastPathSegment?.toLong() ?: return null
-                Log.d(TAG, "查询商品ID: $productId")
                 val product = productDao.getProductById(productId)
                 createCursor(listOfNotNull(product))
             }
@@ -110,8 +101,6 @@ class ProductProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String?>?
     ): Int {
-        Log.d(TAG, "更新数据，URI: $uri")
-
         return when (uriMatcher.match(uri)) {
             PRODUCT_ID -> {
                 val productId = uri.lastPathSegment?.toLong() ?: return 0

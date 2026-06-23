@@ -260,9 +260,6 @@ fun AddAddressScreen(
                 isDefault = if (isDefault) 1 else 0
             )
 
-            //打印发送的数据用于调试
-            android.util.Log.d("AddAddress", "Sending address data: $addressRequest")
-
             isLoading = true
             
             //添加超时处理
@@ -274,41 +271,31 @@ fun AddAddressScreen(
                 }
             }
             
-            //打印即将发送请求的日志
-            android.util.Log.d("AddAddress", "About to call createAddress API")
-            
             RetrofitClient.addressApi.createAddress(addressRequest).enqueue(object : Callback<Result<String>> {
                 override fun onResponse(
                     call: Call<Result<String>>,
                     response: Response<Result<String>>
                 ) {
-                    android.util.Log.d("AddAddress", "onResponse called, isSuccessful: ${response.isSuccessful}, code: ${response.code()}")
                     isLoading = false
                     if (response.isSuccessful) {
                         val result = response.body()
-                        android.util.Log.d("AddAddress", "Response body: $result")
                         if (result != null && result.isSuccess()) {
-                            android.util.Log.d("AddAddress", "Address added successfully, navigating back")
                             navController.popBackStack()
                         } else {
                             val message = result?.message
                             errorMessage = if (message.isNullOrEmpty()) "添加失败" else message
-                            android.util.Log.d("AddAddress", "Add failed: $errorMessage")
                         }
                     } else {
                         errorMessage = "网络请求失败: ${response.code()}"
-                        android.util.Log.d("AddAddress", "Request failed with code: ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<Result<String>>, t: Throwable) {
-                    android.util.Log.e("AddAddress", "onFailure called: ${t.message}", t)
                     isLoading = false
                     errorMessage = "网络错误: ${t.message}"
                 }
             })
         } catch (e: Exception) {
-            android.util.Log.e("AddAddress", "Exception in submitAddress: ${e.message}", e)
             formErrorMessage = "提交失败: ${e.message}"
         }
     }

@@ -1,7 +1,7 @@
 package com.example.xiaoyi.ui.screens
 
 import android.net.Uri
-import android.util.Log
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -208,7 +208,6 @@ private fun PublishProductTab(
 
                 override fun onFailure(call: Call<Result<Map<String, Any>>>, t: Throwable) {
                     uploadCount++
-                    Log.e("SellScreen", "图片上传失败: ${t.message}")
                     //部分图片上传失败，尝试发布
                     if (uploadCount == imageUris.size) {
                         viewModel.publishProduct(

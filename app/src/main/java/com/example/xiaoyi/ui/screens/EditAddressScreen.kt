@@ -230,8 +230,6 @@ fun EditAddressScreen(
                 isDefault = if (isDefault) 1 else 0
             )
 
-            android.util.Log.d("EditAddress", "Sending address data: $addressRequest")
-
             isLoading = true
 
             scope.launch {
@@ -244,7 +242,6 @@ fun EditAddressScreen(
 
             RetrofitClient.addressApi.updateAddress(addressId, addressRequest).enqueue(object : Callback<Result<String>> {
                 override fun onResponse(call: Call<Result<String>>, response: Response<Result<String>>) {
-                    android.util.Log.d("EditAddress", "onResponse called, code: ${response.code()}")
                     isLoading = false
                     if (response.isSuccessful) {
                         val result = response.body()
@@ -259,13 +256,11 @@ fun EditAddressScreen(
                     }
                 }
                 override fun onFailure(call: Call<Result<String>>, t: Throwable) {
-                    android.util.Log.e("EditAddress", "onFailure: ${t.message}", t)
                     isLoading = false
                     errorMessage = "网络错误: ${t.message}"
                 }
             })
         } catch (e: Exception) {
-            android.util.Log.e("EditAddress", "Exception: ${e.message}", e)
             formErrorMessage = "提交失败: ${e.message}"
         }
     }

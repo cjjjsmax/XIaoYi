@@ -36,7 +36,7 @@ class AuthViewModel(private val appDatabase: AppDatabase) : ViewModel() {
         //构建登录函数
         val loginData = mapOf(
             "username" to username,
-            "password" to password  // 直接发送明文，后端使用 BCrypt 验证
+            "password" to password
         )
 
         //调用后端登录API

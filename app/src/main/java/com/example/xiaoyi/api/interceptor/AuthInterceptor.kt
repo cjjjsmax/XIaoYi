@@ -10,7 +10,7 @@ class AuthInterceptor : Interceptor {//认证拦截器
         val originalRequest = chain.request()//获取原始请求
         val url = originalRequest.url.toString()//获取请求url
 
-        //公开接口列表（不需要登录的接口，不添加token）
+        //公开接口列表
         val publicPaths = listOf(
             "/api/users/login",
             "/api/users/register",

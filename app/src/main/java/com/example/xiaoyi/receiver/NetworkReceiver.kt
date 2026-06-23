@@ -6,10 +6,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
-import android.util.Log
-
 class NetworkReceiver : BroadcastReceiver() {
-    private val TAG = "NetworkReceiver"
     interface NetworkStatusListener{
         fun onNetworkConnected()
         fun onNetworkDisconnected()
@@ -25,16 +22,13 @@ class NetworkReceiver : BroadcastReceiver() {
     }
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null){
-            Log.e(TAG,"Context为空，无法检测网络状态")
             return
         }
         val isConnected = isNetworkConnected(context)
 
         if (isConnected){
-            Log.d(TAG,"网络已连接")
             listener?.onNetworkConnected()
         }else{
-            Log.d(TAG,"网络已断开")
             listener?.onNetworkDisconnected()
         }
     }
