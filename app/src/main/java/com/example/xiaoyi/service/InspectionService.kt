@@ -10,6 +10,8 @@ import com.example.xiaoyi.api.RetrofitClient
 import com.example.xiaoyi.model.Result
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.Response
+
 class InspectionService : Service() {
     inner class LocalBinder : Binder(){
         fun getService() : InspectionService = this@InspectionService
