@@ -353,7 +353,6 @@ public class ProductController {
     //获取商品详细
     @GetMapping("/detail")
     public Result<Map<String, Object>> getProductById(@RequestParam Long id, HttpServletRequest request) {
-        System.out.println("getProductById: 接收到的商品ID=" + id);
         try {
             Product product = productService.getById(id);
             if (product != null) {
@@ -393,15 +392,8 @@ public class ProductController {
                     flawMap.put("desc", flaw.getDesc());
                     flawList.add(flawMap);
                 }
-                System.out.println("转换后的flawList大小=" + flawList.size());
-                if (!flawList.isEmpty()) {
-                    for (int i = 0; i < flawList.size(); i++) {
-                        System.out.println("flawList[" + i + "]=" + flawList.get(i));
-                    }
-                }
                 data.put("flaws", flawList);
 
-                System.out.println("最终返回的data中的flaws大小=" + ((List<?>) data.get("flaws")).size());
                 return Result.success("获取成功", data);
             } else {
                 return Result.notFound("商品不存在");
@@ -426,7 +418,6 @@ public class ProductController {
     private String convertImageToBase64(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) {
-            System.out.println("图片文件不存在: " + filePath);
             return null;
         }
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -435,7 +426,6 @@ public class ProductController {
             String extension = getFileExtension(filePath);
             return "data:image/" + extension + ";base64," + Base64.getEncoder().encodeToString(bytes);
         } catch (IOException e) {
-            System.out.println("读取图片文件失败: " + filePath + ", 错误: " + e.getMessage());
             return null;
         }
     }
@@ -479,7 +469,6 @@ public class ProductController {
 
             // 通过商品ID获取图片
             if (!request.containsKey("productId")) {
-                System.out.println("质检失败：缺少productId参数");
                 result.put("code", 400);
                 result.put("message", "缺少必要参数：productId");
                 result.put("data", data);
@@ -489,7 +478,6 @@ public class ProductController {
             Long productId = ((Number) request.get("productId")).longValue();
             Product product = productService.getById(productId);
             if (product == null) {
-                System.out.println("质检失败：商品不存在，productId=" + productId);
                 result.put("code", 404);
                 result.put("message", "商品不存在");
                 result.put("data", data);
@@ -499,7 +487,6 @@ public class ProductController {
             // 获取商品图片并转换为Base64
             String images = product.getImages();
             if (images == null || images.isEmpty()) {
-                System.out.println("质检失败：商品没有图片");
                 result.put("code", 400);
                 result.put("message", "商品没有图片");
                 result.put("data", data);
@@ -511,7 +498,6 @@ public class ProductController {
             for (String imagePath : imagePaths) {
                 String trimmedPath = imagePath.trim();
                 if (!trimmedPath.isEmpty()) {
-                    // 移除可能的前缀，确保路径正确
                     String cleanPath = trimmedPath;
                     if (cleanPath.startsWith("/")) {
                         cleanPath = cleanPath.substring(1);
@@ -523,9 +509,8 @@ public class ProductController {
                     }
                 }
             }
-            System.out.println("商品ID=" + productId + ", 转换为Base64的图片数量=" + imageBase64List.size());
+            
             if (imageBase64List.isEmpty()) {
-                System.out.println("质检失败：无法读取任何图片文件");
                 result.put("code", 400);
                 result.put("message", "无法读取图片文件");
                 result.put("data", data);
@@ -534,33 +519,26 @@ public class ProductController {
 
             // 获取分类对应的提示词
             bizType = aiPromptService.getBizTypeByCategoryId(product.getCategoryId());
-            System.out.println("商品分类bizType=" + bizType);
 
             // 获取质检提示词模板
             String prompt = aiPromptService.getProductInspectionPrompt(bizType);
-            System.out.println("提示词长度=" + (prompt != null ? prompt.length() : 0));
 
             // 调用AI生成报告（使用Base64图片）
-            System.out.println("开始调用AI服务...");
             String reportContent = zhipuAIService.generateProductReportWithBase64(prompt, imageBase64List);
-            System.out.println("AI响应内容: " + reportContent);
 
             // 解析报告
             Map<String, Object> parsedReport = zhipuAIService.parseInspectionReport(reportContent);
             String overallCondition = (String) parsedReport.get("overall_condition");
             List<Map<String, String>> flaws = (List<Map<String, String>>) parsedReport.get("flaws");
-            System.out.println("解析结果 - overallCondition: " + overallCondition + ", flaws数量: " + (flaws != null ? flaws.size() : 0));
 
             // 保存质检结果到数据库
             if (overallCondition != null && !overallCondition.isEmpty()) {
                 product.setOverallCondition(overallCondition);
                 productService.updateById(product);
-                System.out.println("成功保存overallCondition: " + overallCondition);
             }
             productFlawService.deleteFlawsByProductId(productId);
             if (flaws != null && !flaws.isEmpty()) {
                 productFlawService.saveFlaws(productId, flaws);
-                System.out.println("成功保存" + flaws.size() + "条缺陷记录");
             }
 
             // 构建响应
@@ -571,14 +549,10 @@ public class ProductController {
             result.put("data", data);
 
         } catch (IOException e) {
-            System.out.println("AI服务调用失败: " + e.getMessage());
-            e.printStackTrace();
             result.put("code", 500);
             result.put("message", "AI服务调用失败: " + e.getMessage());
             result.put("data", data);
         } catch (Exception e) {
-            System.out.println("生成报告失败: " + e.getMessage());
-            e.printStackTrace();
             result.put("code", 500);
             result.put("message", "生成报告失败: " + e.getMessage());
             result.put("data", data);

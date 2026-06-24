@@ -12,16 +12,8 @@ import java.util.List;
 public class ProductFlawService extends ServiceImpl<ProductFlawMapper, ProductFlaw> {
     //查询商品瑕疵
     public List<ProductFlaw> getFlawsByProductId(Long productId) {
-        System.out.println("查询缺陷列表，productId=" + productId);
-        List<ProductFlaw> flaws = baseMapper.selectList(new LambdaQueryWrapper<ProductFlaw>()
+        return baseMapper.selectList(new LambdaQueryWrapper<ProductFlaw>()
                 .eq(ProductFlaw::getProductId, productId));
-        System.out.println("查询结果：" + (flaws != null ? flaws.size() : 0) + "条记录");
-        if (flaws != null && !flaws.isEmpty()) {
-            for (ProductFlaw flaw : flaws) {
-                System.out.println("缺陷记录：part=" + flaw.getPart() + ", desc=" + flaw.getDesc());
-            }
-        }
-        return flaws;
     }
 
     //删除商品瑕疵记录

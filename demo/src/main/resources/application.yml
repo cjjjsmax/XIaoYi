@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/xy?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
-    password: 1234
+    password: ${DB_PASSWORD:1111}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   servlet:
@@ -33,7 +33,7 @@ mybatis-plus:
 
 zhipu:
   ai:
-    api-key: 6a97e9f0357741c4a76cf5c8e2576247.ynUECmumCZTmwK0d
+    api-key: ${ZHIPU_API_KEY:test_key}
     api-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
     model: GLM-5V-Turbo
 

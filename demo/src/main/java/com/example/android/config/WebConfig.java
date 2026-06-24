@@ -30,9 +30,6 @@ public class WebConfig implements WebMvcConfigurer {
             uploadDir.mkdirs();
         }
 
-        System.out.println("静态资源映射路径: " + uploadPath);
-        System.out.println("检测到上传目录存在: " + uploadDir.exists());
-
         registry.addResourceHandler("/images/**")
                 .addResourceLocations("file:" + uploadPath + "/")
                 .setCachePeriod(0);
